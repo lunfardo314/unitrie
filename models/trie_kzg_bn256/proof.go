@@ -7,6 +7,7 @@ import (
 
 	"github.com/lunfardo314/unitrie/common"
 	"github.com/lunfardo314/unitrie/mutable"
+	"go.dedis.ch/kyber/v3"
 	"golang.org/x/xerrors"
 )
 

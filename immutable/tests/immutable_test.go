@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -351,6 +352,45 @@ func TestBaseScenarios(t *testing.T) {
 	t.Run(name+"5", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256), data4))
 	t.Run(name+"6", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160), data4))
 	t.Run(name+"7", tf(trie_kzg_bn256.New(), data3))
+}
+
+func TestReproduce1(t *testing.T) {
+	runTest := func(m common.CommitmentModel) {
+		identity := "idididid"
+		store := common.NewInMemoryKVStore()
+		rootInitial := immutable.MustInitRoot(store, m, []byte(identity))
+		require.NotNil(t, rootInitial)
+		t.Logf("initial root commitment with id '%s': %s", identity, rootInitial)
+
+		tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+		require.NoError(t, err)
+
+		tr.Update([]byte{0}, []byte{0})
+		tr.Update([]byte{1}, []byte{0})
+		tr.Update([]byte{0x10}, []byte{0})
+		root := tr.Commit(store)
+
+		trr, err := immutable.NewTrieReader(m, store, root)
+		require.NoError(t, err)
+		check := func(k byte) {
+			require.True(t, trr.Has([]byte{k}))
+			v := trr.Get([]byte{k})
+			if !bytes.Equal([]byte{0}, v) {
+				t.Logf("wrong for key %d", k)
+			}
+			require.EqualValues(t, []byte{0}, v)
+		}
+		check(0)
+		check(1)
+		check(0x10)
+	}
+	// TODO failing with arity 16 and 2
+	//runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256))
+	runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256))
+	//runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256))
+	//runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize160))
+	//runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160))
+	//runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160))
 }
 
 func TestDeletionLoop(t *testing.T) {
@@ -747,7 +787,9 @@ func TestSnapshot1(t *testing.T) {
 		require.NoError(t, err)
 
 		storeData.Iterate(func(k, v []byte) bool {
-			tr2.Update(k, v)
+			if len(k) != 0 {
+				tr2.Update(k, v)
+			}
 			return true
 		})
 		root2 := tr2.Commit(store2)

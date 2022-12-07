@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 
 	"github.com/lunfardo314/unitrie/common"
+	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/xerrors"
