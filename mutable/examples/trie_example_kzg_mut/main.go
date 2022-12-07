@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/models/trie_kzg_bn256"
-	"github.com/iotaledger/trie.go/mutable"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/models/trie_kzg_bn256"
+	"github.com/lunfardo314/unitrie/mutable"
 )
 
 var data = []string{"a", "abc", "abcd", "b", "abd", "klmn", "oprst", "ab", "bcd"}

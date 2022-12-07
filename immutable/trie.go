@@ -3,7 +3,7 @@ package immutable
 import (
 	"fmt"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // TrieUpdatable is an updatable trie implemented on top of the unpackedKey/value store. It is virtualized and optimized by caching of the

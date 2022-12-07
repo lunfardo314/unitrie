@@ -12,7 +12,7 @@ import (
 	"strings"
 	"syscall"
 
-	trie_kzg_bn2562 "github.com/iotaledger/trie.go/models/trie_kzg_bn256"
+	trie_kzg_bn2562 "github.com/lunfardo314/unitrie/models/trie_kzg_bn256"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/term"

@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/models/trie_blake2b"
-	"github.com/iotaledger/trie.go/models/trie_blake2b/trie_blake2b_verify"
-	"github.com/iotaledger/trie.go/models/trie_kzg_bn256"
-	"github.com/iotaledger/trie.go/mutable"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/models/trie_blake2b"
+	"github.com/lunfardo314/unitrie/models/trie_blake2b/trie_blake2b_verify"
+	"github.com/lunfardo314/unitrie/models/trie_kzg_bn256"
+	"github.com/lunfardo314/unitrie/mutable"
 	"github.com/stretchr/testify/require"
 )
 

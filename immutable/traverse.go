@@ -3,7 +3,7 @@ package immutable
 import (
 	"bytes"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // PathElement proof element is common.NodeData together with the index of

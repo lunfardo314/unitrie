@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // Node is a read-only interface to the 256+ trie node

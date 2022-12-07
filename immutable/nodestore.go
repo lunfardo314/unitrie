@@ -3,7 +3,7 @@ package immutable
 import (
 	"encoding/hex"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // NodeStore immutable node store

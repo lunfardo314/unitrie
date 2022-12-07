@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/immutable"
-	"github.com/iotaledger/trie.go/models/trie_blake2b"
-	"github.com/iotaledger/trie.go/models/trie_blake2b/trie_blake2b_verify"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/immutable"
+	"github.com/lunfardo314/unitrie/models/trie_blake2b"
+	"github.com/lunfardo314/unitrie/models/trie_blake2b/trie_blake2b_verify"
 	"github.com/stretchr/testify/require"
 )
 

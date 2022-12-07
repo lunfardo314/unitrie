@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // ProofGeneric represents a generic proof of inclusion or a maximal path in the trie which corresponds to the 'unpackedKey'

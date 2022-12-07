@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/mutable"
-	"go.dedis.ch/kyber/v3"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/mutable"
 	"golang.org/x/xerrors"
 )
 

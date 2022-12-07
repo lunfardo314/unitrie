@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // MerkleProof blake2b model specific proof of inclusion

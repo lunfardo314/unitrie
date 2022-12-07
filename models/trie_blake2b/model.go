@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 	"golang.org/x/crypto/blake2b"
 )
 

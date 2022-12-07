@@ -8,10 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/mutable"
-	"go.dedis.ch/kyber/v3"
-
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/mutable"
 	"github.com/stretchr/testify/require"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
 	"go.dedis.ch/kyber/v3/util/random"

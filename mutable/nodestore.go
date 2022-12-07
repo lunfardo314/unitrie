@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // nodeStore direct access to trie

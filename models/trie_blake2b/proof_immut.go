@@ -1,8 +1,8 @@
 package trie_blake2b
 
 import (
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/immutable"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/immutable"
 )
 
 // ProofImmutable converts generic proof path of the immutable trie implementation to the Merkle proof path

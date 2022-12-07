@@ -3,8 +3,8 @@ package trie_blake2b
 import (
 	"fmt"
 
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/mutable"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/mutable"
 )
 
 // ProofMut converts generic proof path of the mutable trie implementation to the Merkle proof path

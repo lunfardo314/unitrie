@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 
-	"github.com/iotaledger/trie.go/common"
+	"github.com/lunfardo314/unitrie/common"
 )
 
 // bufferedNode is a modified node

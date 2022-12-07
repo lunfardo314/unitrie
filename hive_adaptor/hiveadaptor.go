@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
-	"github.com/iotaledger/trie.go/common"
-	"github.com/iotaledger/trie.go/mutable"
+	"github.com/lunfardo314/unitrie/common"
+	"github.com/lunfardo314/unitrie/mutable"
 )
 
 // HiveKVStoreAdaptor maps a partition of the Hive KVStore to trie_go.KVStore
