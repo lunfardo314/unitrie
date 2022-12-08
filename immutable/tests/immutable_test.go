@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -264,7 +263,14 @@ func runUpdateScenario(trie *immutable.TrieUpdatable, store common.KVWriter, sce
 }
 
 func checkResult(t *testing.T, trie *immutable.TrieUpdatable, checklist map[string]string) {
-	for key, expectedValue := range checklist {
+	keys := make([]string, 0)
+	for k := range checklist {
+		keys = append(keys, k)
+	}
+	//sort.Strings(keys)
+
+	for _, key := range keys {
+		expectedValue := checklist[key]
 		v := trie.GetStr(key)
 		if traceScenarios {
 			if len(v) > 0 {
@@ -323,6 +329,10 @@ func TestBaseScenarios(t *testing.T) {
 
 	t.Run("12", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), []string{"a", "ab", "-a"}))
 
+	t.Run("s1-1", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), []string{"a", "ab", "a/"}))
+	t.Run("s1-2", tf(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256), []string{"a", "ab", "a/"}))
+	t.Run("s1-3", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256), []string{"a", "ab", "a/"}))
+
 	data2 := []string{"a", "ab", "abc", "abcd", "abcde", "-abd", "-a"}
 	t.Run("14", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), data2))
 	t.Run("15", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), data2))
@@ -352,45 +362,17 @@ func TestBaseScenarios(t *testing.T) {
 	t.Run(name+"5", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256), data4))
 	t.Run(name+"6", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160), data4))
 	t.Run(name+"7", tf(trie_kzg_bn256.New(), data3))
-}
 
-func TestReproduce1(t *testing.T) {
-	runTest := func(m common.CommitmentModel) {
-		identity := "idididid"
-		store := common.NewInMemoryKVStore()
-		rootInitial := immutable.MustInitRoot(store, m, []byte(identity))
-		require.NotNil(t, rootInitial)
-		t.Logf("initial root commitment with id '%s': %s", identity, rootInitial)
-
-		tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
-		require.NoError(t, err)
-
-		tr.Update([]byte{0}, []byte{0})
-		tr.Update([]byte{1}, []byte{0})
-		tr.Update([]byte{0x10}, []byte{0})
-		root := tr.Commit(store)
-
-		trr, err := immutable.NewTrieReader(m, store, root)
-		require.NoError(t, err)
-		check := func(k byte) {
-			require.True(t, trr.Has([]byte{k}))
-			v := trr.Get([]byte{k})
-			if !bytes.Equal([]byte{0}, v) {
-				t.Logf("wrong for key %d", k)
-			}
-			require.EqualValues(t, []byte{0}, v)
-		}
-		check(0)
-		check(1)
-		check(0x10)
-	}
-	// TODO failing with arity 16 and 2
-	//runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256))
-	runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256))
-	//runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256))
-	//runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize160))
-	//runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160))
-	//runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160))
+	traceScenarios = true
+	data5 := []string{"0", "1/0", "\x10/0"}
+	name = "reproduce1-"
+	t.Run(name+"1", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), data5))
+	t.Run(name+"2", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize160), data5))
+	t.Run(name+"3", tf(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256), data5))
+	t.Run(name+"4", tf(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160), data5))
+	t.Run(name+"5", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256), data5))
+	t.Run(name+"6", tf(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160), data5))
+	t.Run(name+"7", tf(trie_kzg_bn256.New(), data3))
 }
 
 func TestDeletionLoop(t *testing.T) {
@@ -409,11 +391,13 @@ func TestDeletionLoop(t *testing.T) {
 		runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize160), init, sc)
 		runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256), init, sc)
 		runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160), init, sc)
+		traceScenarios = true
 		runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256), init, sc)
+		traceScenarios = false
 		runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160), init, sc)
 		runTest(trie_kzg_bn256.New(), init, sc)
 	}
-	runAll([]string{"a", "b"}, []string{"1", "*", "1/"})
+	runAll([]string{"a"}, []string{"1", "*", "1/"})
 	runAll([]string{"a", "ab", "abc"}, []string{"ac", "*", "ac/"})
 	runAll([]string{"a", "ab", "abc"}, []string{"ac", "ac/"})
 	runAll([]string{}, []string{"a", "a/"})
@@ -467,7 +451,7 @@ func TestDeterminism(t *testing.T) {
 		t.Run(name+"8", tf(trie_kzg_bn256.New(), s1, s2))
 	}
 	{
-		s1 := genRnd3()
+		s1 := genRnd3()[:50]
 		s2 := reverse(s1)
 		name := "order-reverse-many-"
 		t.Run(name+"1", tf(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), s1, s2))
@@ -610,7 +594,9 @@ func TestIteratePrefix(t *testing.T) {
 		name := "iterate-ab"
 		scenario := []string{"a", "ab", "c", "cd", "abcd", "klmn", "aaa", "abra", "111"}
 		prefix := "ab"
+		traceScenarios = true
 		t.Run(name+"1", iterTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256), scenario, prefix))
+		traceScenarios = false
 		t.Run(name+"2", iterTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize160), scenario, prefix))
 		t.Run(name+"3", iterTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256), scenario, prefix))
 		t.Run(name+"4", iterTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160), scenario, prefix))

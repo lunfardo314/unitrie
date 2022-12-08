@@ -39,7 +39,7 @@ func RootCommitment(tr NodeStore) common.VCommitment {
 		PathFragment:     n.PathFragment(),
 		ChildCommitments: n.ChildCommitments(),
 		Terminal:         n.Terminal(),
-	})
+	}, nil)
 }
 
 // Trie implements NodeStore interface. It buffers (caches) all TrieReader for optimization purposes
@@ -133,7 +133,7 @@ func (tr *Trie) commitNode(key []byte) *bufferedNode {
 	}
 
 	calcDelta := !n.pathChanged
-	tr.Model().UpdateNodeCommitment(mutate, childUpdates, n.newTerminal, n.PathFragment(), calcDelta)
+	tr.Model().UpdateNodeCommitment(mutate, childUpdates, n.newTerminal, n.PathFragment(), nil, calcDelta)
 
 	n.n = *mutate
 	if len(n.modifiedChildren) > 0 {
@@ -446,9 +446,9 @@ func (tr *Trie) UpdateAll(store common.KVIterator) {
 	})
 }
 
-func (tr *Trie) DangerouslyDumpCacheToString() string {
-	return tr.nodeStore.dangerouslyDumpCacheToString()
-}
+//func (tr *Trie) DangerouslyDumpCacheToString() string {
+//	return tr.nodeStore.dangerouslyDumpCacheToString()
+//}
 
 // TrieReader implements NodeStore
 var _ NodeStore = &TrieReader{}

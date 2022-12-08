@@ -39,7 +39,7 @@ func (m *CommitmentModel) ProofMut(key []byte, tr mutable.NodeStore) *MerkleProo
 			case common.EndingTerminal:
 				childIndex = m.arity.TerminalCommitmentIndex()
 			case common.EndingExtend, common.EndingSplit:
-				childIndex = m.arity.PathFragmentCommitmentIndex()
+				childIndex = m.arity.PathCommitmentIndex()
 			default:
 				panic("wrong ending code")
 			}

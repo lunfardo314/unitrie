@@ -90,7 +90,7 @@ func (m *CommitmentModel) ProofOfInclusion(key []byte, tr mutable.NodeStore) (*P
 	}
 
 	for i, n := range nodes {
-		ret.Path[i].C = m.calcNodeCommitment(n).Point
+		ret.Path[i].C = m.calcNodeCommitment(n, proofGeneric.Path[i]).Point
 		//if i == 0 || i == proofLength-1 {
 		//	ret.Path[i].C = m.calcNodeCommitment(n).Point
 		//} else {
@@ -98,7 +98,7 @@ func (m *CommitmentModel) ProofOfInclusion(key []byte, tr mutable.NodeStore) (*P
 		//	trie_go.Assert(ok, "can't find commitment at path index %d and child index %d", i-1, ret.Path[i].VectorIndex)
 		//	ret.Path[i].C = nextC.(*vectorCommitment).Point
 		//}
-		ret.Path[i].Proof = m.calcProof(nodes[i], int(ret.Path[i].VectorIndex))
+		ret.Path[i].Proof = m.calcProof(nodes[i], proofGeneric.Path[i], int(ret.Path[i].VectorIndex))
 	}
 
 	ret.Terminal.Set(nodes[proofLength-1].Terminal.(*terminalCommitment).Scalar)

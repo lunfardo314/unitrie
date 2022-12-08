@@ -36,6 +36,7 @@ func newBufferedNode(n *common.NodeData, triePath []byte) *bufferedNode {
 // Normally, the commitNode is called on the root, then
 func (n *bufferedNode) commitNode(triePartition, valuePartition common.KVWriter, m common.CommitmentModel) {
 	childUpdates := make(map[byte]common.VCommitment)
+	// looping in non-deterministic order but that must not matter
 	for idx, child := range n.uncommittedChildren {
 		if child == nil {
 			childUpdates[idx] = nil
@@ -44,9 +45,15 @@ func (n *bufferedNode) commitNode(triePartition, valuePartition common.KVWriter,
 			childUpdates[idx] = child.nodeData.Commitment
 		}
 	}
-	m.UpdateNodeCommitment(n.nodeData, childUpdates, n.terminal, n.pathFragment, !common.IsNil(n.nodeData.Commitment))
+	var cSave common.VCommitment
+	if !common.IsNil(n.nodeData.Commitment) {
+		cSave = n.nodeData.Commitment.Clone()
+	}
+	m.UpdateNodeCommitment(n.nodeData, childUpdates, n.terminal, n.pathFragment, n.triePath, !common.IsNil(n.nodeData.Commitment))
 
-	n.mustPersist(triePartition, m)
+	if !m.EqualCommitments(cSave, n.nodeData.Commitment) {
+		n.mustPersist(triePartition, m)
+	}
 	if len(n.value) > 0 {
 		valuePartition.Set(common.AsKey(n.terminal), n.value)
 	}

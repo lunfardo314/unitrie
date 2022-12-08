@@ -74,16 +74,16 @@ func TestProofScenariosBlake2b(t *testing.T) {
 		runTest(common.PathArity2, trie_blake2b.HashSize256, scenario)
 		runTest(common.PathArity2, trie_blake2b.HashSize160, scenario)
 	}
-	runScenario([]string{"a"})
-	runScenario([]string{"a", "ab"})
+	//runScenario([]string{"a"})
+	//runScenario([]string{"a", "ab"})
 	runScenario([]string{"a", "ab", "a/"})
-	runScenario([]string{"a", "ab", "a/", "ab/"})
-	runScenario([]string{"a", "ab", "abc", "a/", "ab/"})
-	runScenario(genRnd3())
+	//runScenario([]string{"a", "ab", "a/", "ab/"})
+	//runScenario([]string{"a", "ab", "abc", "a/", "ab/"})
+	//runScenario(genRnd3())
 
 	longData := make([]string, 0)
 	for _, k := range []string{"a", "ab", "abc", "bca"} {
 		longData = append(longData, k+"/"+strings.Repeat(k, 200))
 	}
-	runScenario(longData)
+	//runScenario(longData)
 }

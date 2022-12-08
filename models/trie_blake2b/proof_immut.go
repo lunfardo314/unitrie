@@ -41,7 +41,7 @@ func (m *CommitmentModel) ProofImmutable(key []byte, tr *immutable.TrieReader) *
 	case common.EndingTerminal:
 		last.ChildIndex = m.arity.TerminalCommitmentIndex()
 	case common.EndingExtend, common.EndingSplit:
-		last.ChildIndex = m.arity.PathFragmentCommitmentIndex()
+		last.ChildIndex = m.arity.PathCommitmentIndex()
 	default:
 		panic("wrong ending code")
 	}

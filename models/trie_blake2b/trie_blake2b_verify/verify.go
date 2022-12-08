@@ -41,7 +41,7 @@ func MustKeyWithTerminal(p *trie_blake2b.MerkleProof) ([]byte, []byte) {
 			return p.Key, nil
 		}
 		return p.Key, lastElem.Terminal
-	case lastElem.ChildIndex == p.PathArity.PathFragmentCommitmentIndex():
+	case lastElem.ChildIndex == p.PathArity.PathCommitmentIndex():
 		return p.Key, nil
 	}
 	panic("wrong lastElem.ChildIndex")
@@ -62,7 +62,7 @@ func Validate(p *trie_blake2b.MerkleProof, rootBytes []byte) error {
 		}
 		return nil
 	}
-	c, err := verify(p, 0, 0)
+	c, err := verify(p, nil, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func ValidateWithTerminal(p *trie_blake2b.MerkleProof, rootBytes, terminalBytes 
 	return nil
 }
 
-func verify(p *trie_blake2b.MerkleProof, pathIdx, keyIdx int) ([]byte, error) {
+func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) ([]byte, error) {
 	common.Assert(pathIdx < len(p.Path), "assertion: pathIdx < lenPlus1(p.Path)")
 	common.Assert(keyIdx <= len(p.Key), "assertion: keyIdx <= lenPlus1(p.Key)")
 
@@ -109,11 +109,12 @@ func verify(p *trie_blake2b.MerkleProof, pathIdx, keyIdx int) ([]byte, error) {
 		if nextKeyIdx > len(p.Key) {
 			return nil, fmt.Errorf("wrong proof: proof path out of key bounds. Path position: %d, key position %d", pathIdx, keyIdx)
 		}
-		c, err := verify(p, pathIdx+1, nextKeyIdx)
+		nextTriePath := common.Concat(triePath, elem.PathFragment, p.Key[nextKeyIdx-1])
+		c, err := verify(p, nextTriePath, pathIdx+1, nextKeyIdx)
 		if err != nil {
 			return nil, err
 		}
-		return hashProofElement(elem, c, p.PathArity, p.HashSize)
+		return hashProofElement(elem, triePath, c, p.PathArity, p.HashSize)
 	}
 	// it is the last in the path
 	if p.PathArity.IsValidChildIndex(elem.ChildIndex) {
@@ -121,18 +122,18 @@ func verify(p *trie_blake2b.MerkleProof, pathIdx, keyIdx int) ([]byte, error) {
 		if c != nil {
 			return nil, fmt.Errorf("wrong proof: child commitment of the last element expected to be nil. Path position: %d, key position %d", pathIdx, keyIdx)
 		}
-		return hashProofElement(elem, nil, p.PathArity, p.HashSize)
+		return hashProofElement(elem, triePath, nil, p.PathArity, p.HashSize)
 	}
-	if elem.ChildIndex != p.PathArity.TerminalCommitmentIndex() && elem.ChildIndex != p.PathArity.PathFragmentCommitmentIndex() {
+	if elem.ChildIndex != p.PathArity.TerminalCommitmentIndex() && elem.ChildIndex != p.PathArity.PathCommitmentIndex() {
 		return nil, fmt.Errorf("wrong proof: child index expected to be %d or %d. Path position: %d, key position %d",
-			p.PathArity.TerminalCommitmentIndex(), p.PathArity.PathFragmentCommitmentIndex(), pathIdx, keyIdx)
+			p.PathArity.TerminalCommitmentIndex(), p.PathArity.PathCommitmentIndex(), pathIdx, keyIdx)
 	}
-	return hashProofElement(elem, nil, p.PathArity, p.HashSize)
+	return hashProofElement(elem, triePath, nil, p.PathArity, p.HashSize)
 }
 
 const errTooLongCommitment = "too long commitment at position %d. Can't be longer than %d bytes"
 
-func makeHashVector(e *trie_blake2b.MerkleProofElement, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize) ([][]byte, error) {
+func makeHashVector(e *trie_blake2b.MerkleProofElement, nodePath []byte, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize) ([][]byte, error) {
 	hashes := make([][]byte, arity.VectorLength())
 	for idx, c := range e.Children {
 		if !arity.IsValidChildIndex(int(idx)) {
@@ -149,8 +150,10 @@ func makeHashVector(e *trie_blake2b.MerkleProofElement, missingCommitment []byte
 		}
 		hashes[arity.TerminalCommitmentIndex()] = e.Terminal
 	}
-	rawBytes, _ := trie_blake2b.CompressToHashSize(e.PathFragment, sz)
-	hashes[arity.PathFragmentCommitmentIndex()] = rawBytes
+
+	pathToCommit := common.Concat(nodePath, byte('+'), e.PathFragment)
+	rawBytes, _ := trie_blake2b.CompressToHashSize(pathToCommit, sz)
+	hashes[arity.PathCommitmentIndex()] = rawBytes
 	if arity.IsValidChildIndex(e.ChildIndex) {
 		if len(missingCommitment) > int(sz) {
 			return nil, fmt.Errorf(errTooLongCommitment+" (skipped commitment)", e.ChildIndex, int(sz))
@@ -160,8 +163,8 @@ func makeHashVector(e *trie_blake2b.MerkleProofElement, missingCommitment []byte
 	return hashes, nil
 }
 
-func hashProofElement(e *trie_blake2b.MerkleProofElement, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize) ([]byte, error) {
-	hashVector, err := makeHashVector(e, missingCommitment, arity, sz)
+func hashProofElement(e *trie_blake2b.MerkleProofElement, nodePath []byte, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize) ([]byte, error) {
+	hashVector, err := makeHashVector(e, nodePath, missingCommitment, arity, sz)
 	if err != nil {
 		return nil, err
 	}

@@ -110,8 +110,8 @@ func equalCommitments(c1, c2 common.Serializable) bool {
 }
 
 // UpdateNodeCommitment computes update to the node data and, optionally, updates existing commitment
-// In blake2b implementation delta it just means computing the hash of data
-func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpdates map[byte]common.VCommitment, newTerminalUpdate common.TCommitment, pathFragment []byte, _ bool) {
+// In the blake2b implementation, the delta it just means computing the hash of data
+func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpdates map[byte]common.VCommitment, newTerminalUpdate common.TCommitment, pathFragment, nodePath []byte, _ bool) {
 	deleted := make([]byte, 0, 256)
 	for i, upd := range childUpdates {
 		mutate.ChildCommitments[i] = upd
@@ -128,16 +128,16 @@ func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpd
 	if len(mutate.ChildCommitments) == 0 && mutate.Terminal == nil {
 		return
 	}
-	mutate.Commitment = (vectorCommitment)(HashTheVector(m.makeHashVector(mutate), m.arity, m.hashSize))
+	mutate.Commitment = (vectorCommitment)(HashTheVector(m.makeHashVector(mutate, nodePath), m.arity, m.hashSize))
 }
 
 // CalcNodeCommitment computes commitment of the node. It is suboptimal in KZG trie.
 // Used in computing root commitment
-func (m *CommitmentModel) CalcNodeCommitment(par *common.NodeData) common.VCommitment {
+func (m *CommitmentModel) CalcNodeCommitment(par *common.NodeData, nodePath []byte) common.VCommitment {
 	if len(par.ChildCommitments) == 0 && par.Terminal == nil {
 		return nil
 	}
-	return vectorCommitment(HashTheVector(m.makeHashVector(par), m.arity, m.hashSize))
+	return vectorCommitment(HashTheVector(m.makeHashVector(par, nodePath), m.arity, m.hashSize))
 }
 
 func (m *CommitmentModel) CommitToData(data []byte) common.TCommitment {
@@ -228,7 +228,7 @@ func blakeIt(data []byte, sz HashSize) []byte {
 }
 
 // makeHashVector makes the node vector to be hashed. Missing children are nil
-func (m *CommitmentModel) makeHashVector(nodeData *common.NodeData) [][]byte {
+func (m *CommitmentModel) makeHashVector(nodeData *common.NodeData, nodePath []byte) [][]byte {
 	hashes := make([][]byte, m.arity.VectorLength())
 	for i, c := range nodeData.ChildCommitments {
 		common.Assert(int(i) < m.arity.VectorLength(), "int(i)<m.arity.VectorLength()")
@@ -238,8 +238,10 @@ func (m *CommitmentModel) makeHashVector(nodeData *common.NodeData) [][]byte {
 		// squeeze terminal it into the hash size, if longer than hash size
 		hashes[m.arity.TerminalCommitmentIndex()], _ = CompressToHashSize(nodeData.Terminal.Bytes(), m.hashSize)
 	}
-	pathFragmentCommitmentBytes, _ := CompressToHashSize(nodeData.PathFragment, m.hashSize)
-	hashes[m.arity.PathFragmentCommitmentIndex()] = pathFragmentCommitmentBytes
+	// we concatenate with '+' in between in order to distinguish between for example 'a'+'bc' and 'ab'+'c'
+	pathToCommit := common.Concat(nodePath, byte('+'), nodeData.PathFragment)
+	pathFragmentCommitmentBytes, _ := CompressToHashSize(pathToCommit, m.hashSize)
+	hashes[m.arity.PathCommitmentIndex()] = pathFragmentCommitmentBytes
 	return hashes
 }
 

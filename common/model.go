@@ -17,7 +17,7 @@ type CommitmentModel interface {
 	// CommitToData calculates terminal commitment to an arbitrary data
 	CommitToData([]byte) TCommitment
 	// CalcNodeCommitment calculates commitment of the node data
-	CalcNodeCommitment(*NodeData) VCommitment
+	CalcNodeCommitment(n *NodeData, nodePath []byte) VCommitment
 	// UpdateNodeCommitment updates mutable NodeData with the update information.
 	// The node commitment value is part of the mutable NodeData.
 	// Parameter 'calcDelta' specifies if commitment is calculated
@@ -25,7 +25,7 @@ type CommitmentModel interface {
 	// I can be used by implementation to optimize the computation of update. For example KZG implementation
 	// can be made dramatically faster this way than strictly computing each time whole expensive vector commitment
 	// This interface takes into account different ways how updates are propagated in the trie
-	UpdateNodeCommitment(mutate *NodeData, childUpdates map[byte]VCommitment, terminal TCommitment, pathFragment []byte, calcDelta bool)
+	UpdateNodeCommitment(mutate *NodeData, childUpdates map[byte]VCommitment, terminal TCommitment, pathFragment, nodePath []byte, calcDelta bool)
 	// ForceStoreTerminalWithNode if == true, terminal commitment will always be serialized with the node,
 	// otherwise it may be skipped to optimize storage, depending on the trie setting
 	ForceStoreTerminalWithNode(c TCommitment) bool
@@ -78,7 +78,7 @@ func (a PathArity) TerminalCommitmentIndex() int {
 	panic("wrong path arity")
 }
 
-func (a PathArity) PathFragmentCommitmentIndex() int {
+func (a PathArity) PathCommitmentIndex() int {
 	return a.TerminalCommitmentIndex() + 1
 }
 

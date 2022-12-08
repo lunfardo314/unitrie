@@ -62,6 +62,7 @@ func (tr *TrieReader) traverseImmutablePath(triePath []byte, fun func(n *common.
 				fun(n, trieKey, common.EndingSplit)
 				return
 			}
+
 			childIndex := triePath[len(keyPlusPathFragment)]
 			child, childTrieKey := tr.nodeStore.FetchChild(n, childIndex, trieKey)
 			if child == nil {
@@ -101,6 +102,11 @@ func (tr *TrieUpdatable) traverseMutatedPath(triePath []byte, fun func(n *buffer
 			child := n.getChild(childIndex, tr.nodeStore)
 			if child == nil {
 				fun(n, common.EndingExtend)
+				return
+			}
+			childTrieKey := common.Concat(triePath, childIndex)
+			if bytes.Equal(triePath, childTrieKey) {
+				fun(child, common.EndingTerminal)
 				return
 			}
 			fun(n, common.EndingNone)

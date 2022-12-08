@@ -101,7 +101,9 @@ func (ti *TrieIterator) Iterate(fun func(k []byte, v []byte) bool) {
 }
 
 func (ti *TrieIterator) IterateKeys(fun func(k []byte) bool) {
-	ti.tr.iteratePrefix(func(k []byte, v []byte) bool { return fun(k) }, ti.prefix, false)
+	ti.tr.iteratePrefix(func(k []byte, v []byte) bool {
+		return fun(k)
+	}, ti.prefix, false)
 }
 
 // Iterator returns iterator for the sub-trie
@@ -267,15 +269,20 @@ func (tr *TrieReader) iteratePrefix(f func(k []byte, v []byte) bool, prefix []by
 	var root common.VCommitment
 	var triePath []byte
 	unpackedPrefix := common.UnpackBytes(prefix, tr.Model().PathArity())
+	// go down the prefix as deep as possible, then start from there
 	tr.traverseImmutablePath(unpackedPrefix, func(n *common.NodeData, trieKey []byte, ending common.PathEndingCode) {
-		if bytes.HasPrefix(common.Concat(trieKey, n.PathFragment), unpackedPrefix) {
-			root = n.Commitment
-			triePath = trieKey
-		}
+		//if bytes.HasPrefix(common.Concat(trieKey, n.PathFragment), unpackedPrefix) {
+		root = n.Commitment
+		triePath = trieKey
+		//}
 	})
-	if !common.IsNil(root) {
-		tr.iterate(root, triePath, f, extractValue)
-	}
+	common.Assert(!common.IsNil(root), "!common.IsNil(root)")
+	tr.iterate(root, triePath, func(k []byte, v []byte) bool {
+		if bytes.HasPrefix(k, prefix) {
+			return f(k, v)
+		}
+		return true
+	}, extractValue)
 }
 
 func (tr *TrieReader) iterate(root common.VCommitment, triePath []byte, fun func(k []byte, v []byte) bool, extractValue bool) bool {

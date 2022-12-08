@@ -180,7 +180,7 @@ func (m *CommitmentModel) UpdateVCommitment(c *common.VCommitment, delta common.
 }
 
 // UpdateNodeCommitment updates mutated part of node's data and, optionaly, upper
-func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpdates map[byte]common.VCommitment, terminal common.TCommitment, pathFragment []byte, calcDelta bool) {
+func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpdates map[byte]common.VCommitment, terminal common.TCommitment, pathFragment, nodePath []byte, calcDelta bool) {
 	var deltas map[int]kyber.Scalar
 
 	if calcDelta {
@@ -250,28 +250,28 @@ func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpd
 		}
 		mutate.Commitment = m.newVectorCommitment(prevP)
 	} else {
-		mutate.Commitment = m.CalcNodeCommitment(mutate)
+		mutate.Commitment = m.CalcNodeCommitment(mutate, nodePath)
 	}
 }
 
-func (m *CommitmentModel) CalcNodeCommitment(data *common.NodeData) common.VCommitment {
-	return m.calcNodeCommitment(data)
+func (m *CommitmentModel) CalcNodeCommitment(data *common.NodeData, nodePath []byte) common.VCommitment {
+	return m.calcNodeCommitment(data, nodePath)
 }
 
-func (m *CommitmentModel) calcNodeCommitment(data *common.NodeData) *vectorCommitment {
+func (m *CommitmentModel) calcNodeCommitment(data *common.NodeData, nodePath []byte) *vectorCommitment {
 	var vect [258]kyber.Scalar
-	makeVector(data, &m.TrustedSetup, &vect)
+	makeVector(data, nodePath, &m.TrustedSetup, &vect)
 	return &vectorCommitment{Point: m.TrustedSetup.commit(vect[:])}
 }
 
-func (m *CommitmentModel) calcProof(data *common.NodeData, index int) kyber.Point {
+func (m *CommitmentModel) calcProof(data *common.NodeData, nodePath []byte, index int) kyber.Point {
 	var vect [258]kyber.Scalar
-	makeVector(data, &m.TrustedSetup, &vect)
+	makeVector(data, nodePath, &m.TrustedSetup, &vect)
 	return m.TrustedSetup.prove(vect[:], index)
 }
 
 // Vector extracts vector from the node
-func makeVector(n *common.NodeData, ts *TrustedSetup, ret *[258]kyber.Scalar) {
+func makeVector(n *common.NodeData, nodePath []byte, ts *TrustedSetup, ret *[258]kyber.Scalar) {
 	for i, p := range n.ChildCommitments {
 		if p == nil {
 			continue
@@ -282,7 +282,9 @@ func makeVector(n *common.NodeData, ts *TrustedSetup, ret *[258]kyber.Scalar) {
 	if n.Terminal != nil {
 		ret[256] = n.Terminal.(*terminalCommitment).Scalar
 	}
-	h := blake2b.Sum256(n.PathFragment)
+	// we concatenate path to the node, '+' and path fragment to distinguish
+	// between for example 'a'+'bc' and 'ab'+'c'
+	h := blake2b.Sum256(common.Concat(nodePath, byte('+'), n.PathFragment))
 	ret[257] = ts.Suite.G1().Scalar()
 	scalarFromBytes(ret[257], h[:])
 }

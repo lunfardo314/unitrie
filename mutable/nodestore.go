@@ -2,8 +2,6 @@ package mutable
 
 import (
 	"encoding/hex"
-	"fmt"
-	"sort"
 
 	"github.com/lunfardo314/unitrie/common"
 )
@@ -153,15 +151,16 @@ func (sc *nodeStoreBuffered) clearCache() {
 	sc.deleted = make(map[string]struct{})
 }
 
-func (sc *nodeStoreBuffered) dangerouslyDumpCacheToString() string {
-	ret := ""
-	keys := make([]string, 0)
-	for k := range sc.nodeCache {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		ret += fmt.Sprintf("'%s': C = %s\n%s\n", k, sc.reader.m.CalcNodeCommitment(&sc.nodeCache[k].n), sc.nodeCache[k].n.String())
-	}
-	return ret
-}
+//func (sc *nodeStoreBuffered) dangerouslyDumpCacheToString() string {
+//	ret := ""
+//	keys := make([]string, 0)
+//	for k := range sc.nodeCache {
+//		keys = append(keys, k)
+//	}
+//	sort.Strings(keys)
+//	for _, k := range keys {
+//		c := sc.reader.m.CalcNodeCommitment(&sc.nodeCache[k].n)
+//		ret += fmt.Sprintf("'%s': C = %s\n%s\n", k, c, sc.nodeCache[k].n.String())
+//	}
+//	return ret
+//}
