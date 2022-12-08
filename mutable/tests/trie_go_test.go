@@ -41,8 +41,8 @@ func TestNode(t *testing.T) {
 			require.NoError(t, err)
 			require.True(t, bytes.Equal(n.Terminal.Bytes(), nBack.Terminal.Bytes()))
 
-			h := m.CalcNodeCommitment(n)
-			hBack := m.CalcNodeCommitment(nBack)
+			h := m.CalcNodeCommitment(n, nil)
+			hBack := m.CalcNodeCommitment(nBack, nil)
 			require.EqualValues(t, h, hBack)
 			t.Logf("commitment = %s", h)
 		})
@@ -58,8 +58,8 @@ func TestNode(t *testing.T) {
 			nBack, err := common.NodeDataFromBytes(m, buf.Bytes(), m.PathArity(), dummyFun)
 			require.NoError(t, err)
 
-			h := m.CalcNodeCommitment(n)
-			hBack := m.CalcNodeCommitment(nBack)
+			h := m.CalcNodeCommitment(n, nil)
+			hBack := m.CalcNodeCommitment(nBack, nil)
 			require.EqualValues(t, h, hBack)
 			t.Logf("commitment = %s", h)
 		})
@@ -75,8 +75,8 @@ func TestNode(t *testing.T) {
 			nBack, err := common.NodeDataFromBytes(m, buf.Bytes(), m.PathArity(), dummyFun)
 			require.NoError(t, err)
 
-			h := m.CalcNodeCommitment(n)
-			hBack := m.CalcNodeCommitment(nBack)
+			h := m.CalcNodeCommitment(n, nil)
+			hBack := m.CalcNodeCommitment(nBack, nil)
 			require.EqualValues(t, h, hBack)
 			t.Logf("commitment = %s", h)
 		})
@@ -145,7 +145,7 @@ func TestTrieBase(t *testing.T) {
 				PathFragment:     rootNode.PathFragment(),
 				ChildCommitments: rootNode.ChildCommitments(),
 				Terminal:         rootNode.Terminal(),
-			}))
+			}, nil))
 			t.Logf("rootNode ToString: %s", mutable.ToString(rootNode))
 		})
 		t.Run("base2"+tn(m), func(t *testing.T) {
@@ -203,7 +203,7 @@ func TestTrieBase(t *testing.T) {
 				tr1.Update([]byte(data[i]), []byte(data[i]))
 				tr1.Commit()
 			}
-			t.Logf("FIRST:\n%s", tr1.DangerouslyDumpCacheToString())
+			//t.Logf("FIRST:\n%s", tr1.DangerouslyDumpCacheToString())
 
 			c1 := mutable.RootCommitment(tr1)
 
@@ -214,7 +214,7 @@ func TestTrieBase(t *testing.T) {
 				tr2.Update([]byte(data[i]), []byte(data[i]))
 			}
 			tr2.Commit()
-			t.Logf("SECOND:\n%s", tr2.DangerouslyDumpCacheToString())
+			//t.Logf("SECOND:\n%s", tr2.DangerouslyDumpCacheToString())
 			c2 := mutable.RootCommitment(tr2)
 
 			require.True(t, m.EqualCommitments(c1, c2))

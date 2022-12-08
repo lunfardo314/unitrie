@@ -9,11 +9,13 @@ import (
 
 // Trie is an updatable trie implemented on top of the unpackedKey/value store. It is virtualized and optimized by caching of the
 // trie update operation and keeping consistent trie in the cache
+// Deprecated:
 type Trie struct {
 	nodeStore *nodeStoreBuffered
 }
 
 // TrieReader direct read-only access to trie
+// Deprecated:
 type TrieReader struct {
 	reader *nodeStore
 }
@@ -45,6 +47,7 @@ func RootCommitment(tr NodeStore) common.VCommitment {
 // Trie implements NodeStore interface. It buffers (caches) all TrieReader for optimization purposes
 var _ NodeStore = &Trie{}
 
+// Deprecated:
 func NewTrie(model common.CommitmentModel, trieStore, valueStore common.KVReader) *Trie {
 	ret := &Trie{
 		nodeStore: newNodeStoreBuffered(model, trieStore, valueStore, model.PathArity()),
@@ -101,6 +104,7 @@ func (tr *Trie) newTerminalNode(unpackedKey, unpackedPathFragment []byte, newTer
 
 // Commit calculates a new root commitment value from the cache and commits all mutations in the cached TrieReader
 // It is a re-calculation of the trie. bufferedNode caches are updated accordingly.
+// Deprecated:
 func (tr *Trie) Commit() {
 	tr.commitNode(nil)
 }

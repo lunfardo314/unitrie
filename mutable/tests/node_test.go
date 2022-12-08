@@ -25,7 +25,7 @@ func TestNodeSerialization(t *testing.T) {
 			nBack, err := common.NodeDataFromBytes(m, buf.Bytes(), arity, dummyFun)
 			require.NoError(t, err)
 
-			require.True(t, m.EqualCommitments(m.CalcNodeCommitment(n), m.CalcNodeCommitment(nBack)))
+			require.True(t, m.EqualCommitments(m.CalcNodeCommitment(n, nil), m.CalcNodeCommitment(nBack, nil)))
 		})
 		t.Run(fmt.Sprintf("2: %s: %s", arity, hashSize), func(t *testing.T) {
 			n := common.NewNodeData()
@@ -37,7 +37,7 @@ func TestNodeSerialization(t *testing.T) {
 			nBack, err := common.NodeDataFromBytes(m, buf.Bytes(), arity, dummyFun)
 			require.NoError(t, err)
 
-			require.True(t, m.EqualCommitments(m.CalcNodeCommitment(n), m.CalcNodeCommitment(nBack)))
+			require.True(t, m.EqualCommitments(m.CalcNodeCommitment(n, nil), m.CalcNodeCommitment(nBack, nil)))
 		})
 	}
 	runTest(common.PathArity256, trie_blake2b.HashSize256)

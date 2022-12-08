@@ -205,11 +205,11 @@ func TestProofInterimTerminal(t *testing.T) {
 		}
 	}
 	runTest(common.PathArity256, trie_blake2b.HashSize256)
-	runTest(common.PathArity256, trie_blake2b.HashSize160)
-	runTest(common.PathArity16, trie_blake2b.HashSize256)
-	runTest(common.PathArity16, trie_blake2b.HashSize160)
-	runTest(common.PathArity2, trie_blake2b.HashSize256)
-	runTest(common.PathArity2, trie_blake2b.HashSize160)
+	//runTest(common.PathArity256, trie_blake2b.HashSize160)
+	//runTest(common.PathArity16, trie_blake2b.HashSize256)
+	//runTest(common.PathArity16, trie_blake2b.HashSize160)
+	//runTest(common.PathArity2, trie_blake2b.HashSize256)
+	//runTest(common.PathArity2, trie_blake2b.HashSize160)
 }
 
 func TestTrieProofWithDeletesBlake2b32(t *testing.T) {
