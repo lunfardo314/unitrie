@@ -10,12 +10,14 @@ import (
 )
 
 // HiveKVStoreAdaptor maps a partition of the Hive KVStore to trie_go.KVStore
+// Deprecated:
 type HiveKVStoreAdaptor struct {
 	kvs    kvstore.KVStore
 	prefix []byte
 }
 
 // NewHiveKVStoreAdaptor creates a new KVStore as a partition of hive.go KVStore
+// Deprecated:
 func NewHiveKVStoreAdaptor(kvs kvstore.KVStore, prefix []byte) *HiveKVStoreAdaptor {
 	return &HiveKVStoreAdaptor{kvs: kvs, prefix: prefix}
 }
