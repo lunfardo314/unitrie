@@ -78,6 +78,11 @@ func Concat(par ...interface{}) []byte {
 			buf.Write([]byte(p))
 		case interface{ Bytes() []byte }:
 			buf.Write(p.Bytes())
+		case int:
+			if p < 0 || p > 255 {
+				panic("Concat: not a 1 byte integer value")
+			}
+			buf.WriteByte(byte(p))
 		default:
 			Assert(false, "Concat: unsupported type %T", p)
 		}
