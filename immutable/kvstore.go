@@ -3,6 +3,7 @@ package immutable
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 
 	"github.com/lunfardo314/unitrie/common"
 )
@@ -422,4 +423,22 @@ func (tr *TrieUpdatable) DeleteStr(key interface{}) {
 		}
 	}
 	tr.Delete(k)
+}
+
+// AddWithPrefix is mass adding keys with the same prefix
+// TODO optimization of mass prefix update. Needed for UTXO ledger state updates
+func (tr *TrieUpdatable) AddWithPrefix(prefix []byte, suffixValues map[string][]byte) error {
+	if len(suffixValues) == 0 {
+		tr.DeletePrefix(prefix)
+		return nil
+	}
+	if tr.HasWithPrefix(prefix) {
+		return fmt.Errorf("AddWithPrefix: can't add to non-empty prefix '0x%s'", hex.EncodeToString(prefix))
+	}
+	for suffix, value := range suffixValues {
+		if len(value) > 0 {
+			tr.Update(common.Concat(prefix, []byte(suffix)), value)
+		}
+	}
+	return nil
 }
