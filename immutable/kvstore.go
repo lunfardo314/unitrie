@@ -80,6 +80,16 @@ func (tr *TrieReader) Has(key []byte) bool {
 	return found
 }
 
+// HasWithPrefix check existence of at least one key with specified prefix in the trie
+func (tr *TrieReader) HasWithPrefix(prefix []byte) bool {
+	ret := false
+	tr.iteratePrefix(func(_, _ []byte) bool {
+		ret = true
+		return false
+	}, prefix, false)
+	return ret
+}
+
 // Iterate iterates all the key/value pairs in the trie
 func (tr *TrieReader) Iterate(f func(k []byte, v []byte) bool) {
 	tr.iteratePrefix(f, nil, true)
@@ -87,7 +97,7 @@ func (tr *TrieReader) Iterate(f func(k []byte, v []byte) bool) {
 
 // IterateKeys iterates all the keys in the trie
 func (tr *TrieReader) IterateKeys(f func(k []byte) bool) {
-	tr.iteratePrefix(func(k []byte, v []byte) bool { return f(k) }, nil, false)
+	tr.iteratePrefix(func(k []byte, _ []byte) bool { return f(k) }, nil, false)
 }
 
 // TrieIterator implements common.KVIterator interface for keys in the trie with given prefix
@@ -271,10 +281,8 @@ func (tr *TrieReader) iteratePrefix(f func(k []byte, v []byte) bool, prefix []by
 	unpackedPrefix := common.UnpackBytes(prefix, tr.Model().PathArity())
 	// go down the prefix as deep as possible, then start from there
 	tr.traverseImmutablePath(unpackedPrefix, func(n *common.NodeData, trieKey []byte, ending common.PathEndingCode) {
-		//if bytes.HasPrefix(common.Concat(trieKey, n.PathFragment), unpackedPrefix) {
 		root = n.Commitment
 		triePath = trieKey
-		//}
 	})
 	common.Assert(!common.IsNil(root), "!common.IsNil(root)")
 	tr.iterate(root, triePath, func(k []byte, v []byte) bool {

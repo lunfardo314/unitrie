@@ -726,6 +726,40 @@ func TestDeletePrefix(t *testing.T) {
 	}
 }
 
+func TestHasWithPrefix(t *testing.T) {
+	runTest := func(m common.CommitmentModel) {
+		store := common.NewInMemoryKVStore()
+		initRoot := immutable.MustInitRoot(store, m, []byte("idididid"))
+		tr, err := immutable.NewTrieUpdatable(m, store, initRoot)
+		require.NoError(t, err)
+
+		scenario := []string{"a", "ab", "a1", "b", "bcd"}
+		res, root := runUpdateScenario(tr, store, scenario)
+		checkResult(t, tr, res)
+
+		trCheck, err := immutable.NewTrieUpdatable(m, store, root)
+		require.NoError(t, err)
+
+		require.True(t, trCheck.HasWithPrefix([]byte("")))
+		require.True(t, trCheck.HasWithPrefix([]byte("a")))
+		require.True(t, trCheck.HasWithPrefix([]byte("ab")))
+		require.True(t, trCheck.HasWithPrefix([]byte("a1")))
+		require.True(t, trCheck.HasWithPrefix([]byte("b")))
+		require.True(t, trCheck.HasWithPrefix([]byte("bc")))
+		require.False(t, trCheck.HasWithPrefix([]byte("ac")))
+		require.False(t, trCheck.HasWithPrefix([]byte("c")))
+		require.False(t, trCheck.HasWithPrefix([]byte("1")))
+		require.False(t, trCheck.HasWithPrefix([]byte("a12")))
+	}
+	runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize256))
+	runTest(trie_blake2b.New(common.PathArity256, trie_blake2b.HashSize160))
+	runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256))
+	runTest(trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160))
+	runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize256))
+	runTest(trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160))
+	runTest(trie_kzg_bn256.New())
+}
+
 const letters = "abcdefghijklmnop"
 
 func genRnd3() []string {
