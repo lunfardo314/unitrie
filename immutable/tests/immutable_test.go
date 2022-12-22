@@ -184,9 +184,6 @@ func TestBaseUpdate(t *testing.T) {
 			rootNext := tr.Commit(store)
 			t.Logf("after commit: %s", rootNext)
 
-			err = tr.SetRoot(rootNext)
-			require.NoError(t, err)
-
 			for _, key := range data {
 				v := tr.GetStr(key)
 				require.EqualValues(t, strings.Repeat(key, 5), v)
