@@ -109,14 +109,6 @@ func (trc *TrieChained) CommitChained() *TrieChained {
 	return ret
 }
 
-func (tr *TrieUpdatable) Persist(db common.KVBatchedWriter) (common.VCommitment, error) {
-	ret := tr.Commit(db)
-	if err := db.Commit(); err != nil {
-		return nil, err
-	}
-	return ret, nil
-}
-
 func (tr *TrieUpdatable) newTerminalNode(triePath, pathFragment, value []byte) *bufferedNode {
 	ret := newBufferedNode(nil, triePath)
 	ret.setPathFragment(pathFragment)
