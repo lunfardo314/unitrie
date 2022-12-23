@@ -25,22 +25,23 @@ func TestDeletedKey(t *testing.T) {
 
 	var root1 common.VCommitment
 	{
-		tr, err := immutable.NewTrieUpdatable(m, store, root0)
+		tr, err := immutable.NewTrieChained(m, store, root0)
 		require.NoError(t, err)
 		tr.Update([]byte("a"), []byte("a"))
 		tr.Update([]byte("b"), []byte("b"))
-		root1 = tr.Commit(store)
+		tr = tr.CommitChained()
+		root1 = tr.Root()
 	}
 
 	var root2 common.VCommitment
 	{
-		tr, err := immutable.NewTrieUpdatable(m, store, root1)
+		tr, err := immutable.NewTrieChained(m, store, root1)
 		require.NoError(t, err)
 		tr.Update([]byte("a"), nil)
 		tr.Update([]byte("b"), []byte("bb"))
 		tr.Update([]byte("c"), []byte("c"))
-		root2 = tr.Commit(store)
-		require.NoError(t, err)
+		tr = tr.CommitChained()
+		root2 = tr.Root()
 
 		require.Nil(t, tr.Get([]byte("a")))
 	}
@@ -98,14 +99,15 @@ func TestCreateTrie(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", identity, rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
 			v := tr.GetStr("")
 			require.EqualValues(t, identity, v)
 
 			tr.UpdateStr(key, value)
-			rootCnext := tr.Commit(store)
+			tr = tr.CommitChained()
+			rootCnext := tr.Root()
 			t.Logf("initial root commitment: %s", rootInitial)
 			t.Logf("next root commitment: %s", rootCnext)
 
@@ -131,14 +133,15 @@ func TestCreateTrie(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", identity, rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
 			v := tr.GetStr("")
 			require.EqualValues(t, identity, v)
 
 			tr.UpdateStr(key, strings.Repeat(value, 500))
-			rootCnext := tr.Commit(store)
+			tr = tr.CommitChained()
+			rootCnext := tr.Root()
 			t.Logf("initial root commitment: %s", rootInitial)
 			t.Logf("next root commitment: %s", rootCnext)
 
@@ -172,7 +175,7 @@ func TestBaseUpdate(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", identity, rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
 			//data = data[:2]
@@ -181,7 +184,8 @@ func TestBaseUpdate(t *testing.T) {
 				fmt.Printf("+++ update key='%s', value='%s'\n", key, value)
 				tr.UpdateStr(key, value)
 			}
-			rootNext := tr.Commit(store)
+			tr = tr.CommitChained()
+			rootNext := tr.Root()
 			t.Logf("after commit: %s", rootNext)
 
 			for _, key := range data {
@@ -206,7 +210,7 @@ func TestBaseUpdate(t *testing.T) {
 
 var traceScenarios = false
 
-func runUpdateScenario(trie *immutable.TrieUpdatable, store common.KVWriter, scenario []string) (map[string]string, common.VCommitment) {
+func runUpdateScenario(trie *immutable.TrieChained, scenario []string) (*immutable.TrieChained, map[string]string) {
 	checklist := make(map[string]string)
 	uncommitted := false
 	var ret common.VCommitment
@@ -215,7 +219,7 @@ func runUpdateScenario(trie *immutable.TrieUpdatable, store common.KVWriter, sce
 			continue
 		}
 		if cmd == "*" {
-			ret = trie.Commit(store)
+			trie = trie.CommitChained()
 			if traceScenarios {
 				fmt.Printf("+++ commit. Root: '%s'\n", ret)
 			}
@@ -248,7 +252,7 @@ func runUpdateScenario(trie *immutable.TrieUpdatable, store common.KVWriter, sce
 		}
 	}
 	if uncommitted {
-		ret = trie.Commit(store)
+		trie = trie.CommitChained()
 		if traceScenarios {
 			fmt.Printf("+++ commit. Root: '%s'\n", ret)
 		}
@@ -256,10 +260,10 @@ func runUpdateScenario(trie *immutable.TrieUpdatable, store common.KVWriter, sce
 	if traceScenarios {
 		fmt.Printf("+++ return root: '%s'\n", ret)
 	}
-	return checklist, trie.Root()
+	return trie, checklist
 }
 
-func checkResult(t *testing.T, trie *immutable.TrieUpdatable, checklist map[string]string) {
+func checkResult(t *testing.T, trie *immutable.TrieReader, checklist map[string]string) {
 	keys := make([]string, 0)
 	for k := range checklist {
 		keys = append(keys, k)
@@ -296,11 +300,12 @@ func TestBaseScenarios(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", identity, rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
-			checklist, _ := runUpdateScenario(tr, store, data)
-			checkResult(t, tr, checklist)
+			var checklist map[string]string
+			tr, checklist = runUpdateScenario(tr, data)
+			checkResult(t, tr.TrieReader, checklist)
 		}
 	}
 	data1 := []string{"ab", "acd", "-a", "-ab", "abc", "abd", "abcdafgh", "-acd", "aaaaaaaaaaaaaaaa", "klmnt"}
@@ -376,11 +381,13 @@ func TestDeletionLoop(t *testing.T) {
 	runTest := func(m common.CommitmentModel, initScenario, scenario []string) {
 		store := common.NewInMemoryKVStore()
 		beginRoot := immutable.MustInitRoot(store, m, []byte("ididididid"))
-		tr, err := immutable.NewTrieUpdatable(m, store, beginRoot)
+		tr, err := immutable.NewTrieChained(m, store, beginRoot)
 		require.NoError(t, err)
 		t.Logf("TestDeletionLoop: model: '%s', init='%s', scenario='%s'", m.ShortName(), initScenario, scenario)
-		_, beginRoot = runUpdateScenario(tr, store, initScenario)
-		_, endRoot := runUpdateScenario(tr, store, scenario)
+		tr, _ = runUpdateScenario(tr, initScenario)
+		beginRoot = tr.Root()
+		tr, _ = runUpdateScenario(tr, scenario)
+		endRoot := tr.Root()
 		require.True(t, tr.Model().EqualCommitments(beginRoot, endRoot))
 	}
 	runAll := func(init, sc []string) {
@@ -415,21 +422,25 @@ func TestDeterminism(t *testing.T) {
 			store1 := common.NewInMemoryKVStore()
 			initRoot1 := immutable.MustInitRoot(store1, m, []byte(identity))
 
-			tr1, err := immutable.NewTrieUpdatable(m, store1, initRoot1)
+			tr1, err := immutable.NewTrieChained(m, store1, initRoot1)
 			require.NoError(t, err)
 
-			checklist1, root1 := runUpdateScenario(tr1, store1, scenario1)
-			checkResult(t, tr1, checklist1)
+			var checklist1 map[string]string
+			tr1, checklist1 = runUpdateScenario(tr1, scenario1)
+			root1 := tr1.Root()
+			checkResult(t, tr1.TrieReader, checklist1)
 
 			fmt.Printf("--------- scenario2: %v\n", scenario2)
 			store2 := common.NewInMemoryKVStore()
 			initRoot2 := immutable.MustInitRoot(store2, m, []byte(identity))
 
-			tr2, err := immutable.NewTrieUpdatable(m, store2, initRoot2)
+			tr2, err := immutable.NewTrieChained(m, store2, initRoot2)
 			require.NoError(t, err)
 
-			checklist2, root2 := runUpdateScenario(tr2, store2, scenario2)
-			checkResult(t, tr2, checklist2)
+			var checklist2 map[string]string
+			tr2, checklist2 = runUpdateScenario(tr2, scenario2)
+			root2 := tr2.Root()
+			checkResult(t, tr2.TrieReader, checklist2)
 
 			require.True(t, m.EqualCommitments(root1, root2))
 		}
@@ -483,11 +494,13 @@ func TestIterate(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", "identity", rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
-			checklist, root := runUpdateScenario(tr, store, scenario)
-			checkResult(t, tr, checklist)
+			var checklist map[string]string
+			tr, checklist = runUpdateScenario(tr, scenario)
+			root := tr.Root()
+			checkResult(t, tr.TrieReader, checklist)
 
 			trr, err := immutable.NewTrieReader(m, store, root, 0)
 			require.NoError(t, err)
@@ -559,10 +572,11 @@ func TestIteratePrefix(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", "identity", rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
-			_, root := runUpdateScenario(tr, store, scenario)
+			tr, _ = runUpdateScenario(tr, scenario)
+			root := tr.Root()
 
 			trr, err := immutable.NewTrieReader(m, store, root, 0)
 			require.NoError(t, err)
@@ -647,16 +661,13 @@ func TestDeletePrefix(t *testing.T) {
 			require.NotNil(t, rootInitial)
 			t.Logf("initial root commitment with id '%s': %s", "identity", rootInitial)
 
-			tr, err := immutable.NewTrieUpdatable(m, store, rootInitial)
+			tr, err := immutable.NewTrieChained(m, store, rootInitial)
 			require.NoError(t, err)
 
-			_, root := runUpdateScenario(tr, store, scenario)
-
-			tr, err = immutable.NewTrieUpdatable(m, store, root, 0)
-			require.NoError(t, err)
+			tr, _ = runUpdateScenario(tr, scenario)
 
 			deleted := tr.DeletePrefix([]byte(prefix))
-			tr.Commit(store)
+			tr = tr.CommitChained()
 
 			tr.Iterator([]byte(prefix)).Iterate(func(k []byte, v []byte) bool {
 				if traceScenarios {
@@ -727,12 +738,16 @@ func TestHasWithPrefix(t *testing.T) {
 	runTest := func(m common.CommitmentModel) {
 		store := common.NewInMemoryKVStore()
 		initRoot := immutable.MustInitRoot(store, m, []byte("idididid"))
-		tr, err := immutable.NewTrieUpdatable(m, store, initRoot)
+		tr, err := immutable.NewTrieChained(m, store, initRoot)
 		require.NoError(t, err)
 
 		scenario := []string{"a", "ab", "a1", "b", "bcd"}
-		res, root := runUpdateScenario(tr, store, scenario)
-		checkResult(t, tr, res)
+
+		var res map[string]string
+		tr, res = runUpdateScenario(tr, scenario)
+		root := tr.Root()
+
+		checkResult(t, tr.TrieReader, res)
 
 		trCheck, err := immutable.NewTrieUpdatable(m, store, root)
 		require.NoError(t, err)
@@ -791,16 +806,18 @@ func TestSnapshot1(t *testing.T) {
 	runTest := func(m common.CommitmentModel, data []string) {
 		store1 := common.NewInMemoryKVStore()
 		initRoot1 := immutable.MustInitRoot(store1, m, []byte("idididid"))
-		tr1, err := immutable.NewTrieUpdatable(m, store1, initRoot1)
+		tr1, err := immutable.NewTrieChained(m, store1, initRoot1)
 		require.NoError(t, err)
 
-		_, root1 := runUpdateScenario(tr1, store1, data)
+		tr1, _ = runUpdateScenario(tr1, data)
+		root1 := tr1.Root()
+
 		storeData := common.NewInMemoryKVStore()
 		tr1.SnapshotData(storeData)
 
 		store2 := common.NewInMemoryKVStore()
 		initRoot2 := immutable.MustInitRoot(store2, m, []byte("idididid"))
-		tr2, err := immutable.NewTrieUpdatable(m, store2, initRoot2)
+		tr2, err := immutable.NewTrieChained(m, store2, initRoot2)
 		require.NoError(t, err)
 
 		storeData.Iterate(func(k, v []byte) bool {
@@ -809,7 +826,8 @@ func TestSnapshot1(t *testing.T) {
 			}
 			return true
 		})
-		root2 := tr2.Commit(store2)
+		tr2 = tr2.CommitChained()
+		root2 := tr2.Root()
 
 		require.True(t, m.EqualCommitments(root1, root2))
 	}
@@ -839,20 +857,25 @@ func TestSnapshot2(t *testing.T) {
 	runTest := func(m common.CommitmentModel, data []string) {
 		store1 := common.NewInMemoryKVStore()
 		initRoot1 := immutable.MustInitRoot(store1, m, []byte("idididid"))
-		tr1, err := immutable.NewTrieUpdatable(m, store1, initRoot1)
+		tr1, err := immutable.NewTrieChained(m, store1, initRoot1)
 		require.NoError(t, err)
 
-		_, root1 := runUpdateScenario(tr1, store1, data)
+		tr1, _ = runUpdateScenario(tr1, data)
+		root1 := tr1.Root()
+
 		store2 := common.NewInMemoryKVStore()
 		tr1.Snapshot(store2)
 
-		tr2, err := immutable.NewTrieUpdatable(m, store2, root1)
+		tr2, err := immutable.NewTrieChained(m, store2, root1)
 		require.NoError(t, err)
 
 		sc1 := []string{"@", "#$%%^", "____++++", "~~~~~"}
 		sc2 := []string{"@", "#$%%^", "*", "____++++", "~~~~~"}
-		_, r1 := runUpdateScenario(tr1, store1, sc1)
-		_, r2 := runUpdateScenario(tr2, store2, sc2)
+		tr1, _ = runUpdateScenario(tr1, sc1)
+		r1 := tr1.Root()
+
+		tr2, _ = runUpdateScenario(tr2, sc2)
+		r2 := tr2.Root()
 		require.True(t, m.EqualCommitments(r1, r2))
 	}
 	{

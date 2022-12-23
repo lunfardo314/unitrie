@@ -41,10 +41,13 @@ func TestProofScenariosBlake2b(t *testing.T) {
 		m := trie_blake2b.New(arity, hashSize)
 		store := common.NewInMemoryKVStore()
 		initRoot := immutable.MustInitRoot(store, m, []byte(identity))
-		tr, err := immutable.NewTrieUpdatable(m, store, initRoot)
+		tr, err := immutable.NewTrieChained(m, store, initRoot)
 		require.NoError(t, err)
 
-		checklist, root := runUpdateScenario(tr, store, scenario)
+		var checklist map[string]string
+		tr, checklist = runUpdateScenario(tr, scenario)
+		root := tr.Root()
+
 		trr, err := immutable.NewTrieReader(m, store, root)
 		require.NoError(t, err)
 		for k, v := range checklist {

@@ -33,10 +33,14 @@ type KVBatchedWriter interface {
 	Commit() error
 }
 
-// KVStore is a compound interface
+// KVStore is a compound interface for reading and writing
 type KVStore interface {
 	KVReader
 	KVWriter
+}
+
+type KVStoreWithIteration interface {
+	KVStore
 	KVIterator
 }
 

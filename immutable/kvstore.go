@@ -10,6 +10,7 @@ import (
 
 // Update updates TrieUpdatable with the unpackedKey/value. Reorganizes and re-calculates trie, keeps cache consistent
 func (tr *TrieUpdatable) Update(key []byte, value []byte) {
+	common.Assert(!common.IsNil(tr.persistentRoot), "Update:: updatable trie has been invalidated")
 	common.Assert(len(key) > 0, "identity of the state can't be changed")
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
 	if len(value) == 0 {
@@ -21,6 +22,7 @@ func (tr *TrieUpdatable) Update(key []byte, value []byte) {
 
 // Delete deletes Key/value from the TrieUpdatable
 func (tr *TrieUpdatable) Delete(key []byte) {
+	common.Assert(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie has been invalidated")
 	if len(key) == 0 {
 		// we do not want to delete root
 		return
@@ -31,6 +33,7 @@ func (tr *TrieUpdatable) Delete(key []byte) {
 // DeletePrefix deletes all kv pairs with the prefix. It is a very fast operation, it modifies only one node
 // and all children (any number) disappears from the next root
 func (tr *TrieUpdatable) DeletePrefix(pathPrefix []byte) bool {
+	common.Assert(!common.IsNil(tr.persistentRoot), "DeletePrefix:: updatable trie has been invalidated")
 	if len(pathPrefix) == 0 {
 		// we do not want to delete root, or do we?
 		return false
@@ -428,6 +431,7 @@ func (tr *TrieUpdatable) DeleteStr(key interface{}) {
 // AddWithPrefix is mass adding keys with the same prefix
 // TODO optimization of mass prefix update. Needed for UTXO ledger state updates
 func (tr *TrieUpdatable) AddWithPrefix(prefix []byte, suffixValues map[string][]byte) error {
+	common.Assert(!common.IsNil(tr.persistentRoot), "AddWithPrefix:: updatable trie has been invalidated")
 	if len(suffixValues) == 0 {
 		tr.DeletePrefix(prefix)
 		return nil
