@@ -80,7 +80,7 @@ func (tr *TrieUpdatable) Commit(store common.KVWriter) common.VCommitment {
 
 	tr.ClearCache()
 	rootNodeData, ok := tr.nodeStore.FetchNodeData(tr.persistentRoot)
-	common.Assert(ok, "Commit: inconsistency")
+	common.Assert(ok, "Commit::inconsistency:can't find node for just committed root %s", tr.persistentRoot)
 	tr.mutatedRoot = newBufferedNode(rootNodeData, nil) // the previous mutated tree will be GC-ed
 	return tr.persistentRoot
 }

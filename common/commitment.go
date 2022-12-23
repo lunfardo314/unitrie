@@ -82,3 +82,10 @@ func ExtractValue(c TCommitment) ([]byte, bool) {
 	}
 	return c.ExtractValue()
 }
+
+func CommitmentToString(c Serializable) string {
+	if IsNil(c) {
+		return "(commit=nil)"
+	}
+	return c.String()
+}
