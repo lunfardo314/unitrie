@@ -3,57 +3,59 @@ package common
 //----------------------------------------------------------------------------
 // generic abstraction interfaces of key/value storage
 
-// KVReader is a key/value reader
-type KVReader interface {
-	// Get retrieves value by key. Returned nil means absence of the key
-	Get(key []byte) []byte
-	// Has checks presence of the key in the key/value store
-	Has(key []byte) bool // for performance
-}
+type (
+	// KVReader is a key/value reader
+	KVReader interface {
+		// Get retrieves value by key. Returned nil means absence of the key
+		Get(key []byte) []byte
+		// Has checks presence of the key in the key/value store
+		Has(key []byte) bool // for performance
+	}
 
-// KVWriter is a key/value writer
-type KVWriter interface {
-	// Set writes new or updates existing key with the value.
-	// value == nil means deletion of the key from the store
-	Set(key, value []byte)
-}
+	// KVWriter is a key/value writer
+	KVWriter interface {
+		// Set writes new or updates existing key with the value.
+		// value == nil means deletion of the key from the store
+		Set(key, value []byte)
+	}
 
-// KVIterator is an interface to iterate through a set of key/value pairs.
-// Order of iteration is NON-DETERMINISTIC in general
-type KVIterator interface {
-	Iterate(func(k, v []byte) bool)
-	IterateKeys(func(k []byte) bool)
-}
+	// KVIterator is an interface to iterate through a set of key/value pairs.
+	// Order of iteration is NON-DETERMINISTIC in general
+	KVIterator interface {
+		Iterate(func(k, v []byte) bool)
+		IterateKeys(func(k []byte) bool)
+	}
 
-// KVBatchedWriter collects mutations in the buffer via Set-s to KVWriter and then flushes (applies) it atomically to DB with Commit
-// KVBatchedWriter implementation should be deterministic: the sequence of Set-s to KWWriter exactly determines
-// the sequence, how key/value pairs in the database are updated or deleted (with value == nil)
-type KVBatchedWriter interface {
-	KVWriter
-	Commit() error
-}
+	// KVBatchedWriter collects mutations in the buffer via Set-s to KVWriter and then flushes (applies) it atomically to DB with Commit
+	// KVBatchedWriter implementation should be deterministic: the sequence of Set-s to KWWriter exactly determines
+	// the sequence, how key/value pairs in the database are updated or deleted (with value == nil)
+	KVBatchedWriter interface {
+		KVWriter
+		Commit() error
+	}
 
-// KVStore is a compound interface for reading and writing
-type KVStore interface {
-	KVReader
-	KVWriter
-}
+	// KVStore is a compound interface for reading and writing
+	KVStore interface {
+		KVReader
+		KVWriter
+	}
 
-type KVStoreWithIteration interface {
-	KVStore
-	KVIterator
-}
+	KVStoreWithIteration interface {
+		KVStore
+		KVIterator
+	}
 
-// BatchedUpdatable is a KVStore equipped with the batched update capability. You can only update
-// BatchedUpdatable in atomic batches
-type BatchedUpdatable interface {
-	BatchedWriter() KVBatchedWriter
-}
+	// BatchedUpdatable is a KVStore equipped with the batched update capability. You can only update
+	// BatchedUpdatable in atomic batches
+	BatchedUpdatable interface {
+		BatchedWriter() KVBatchedWriter
+	}
 
-// Traversable is an interface which provides with partial iterators
-type Traversable interface {
-	Iterator(prefix []byte) KVIterator
-}
+	// Traversable is an interface which provides with partial iterators
+	Traversable interface {
+		Iterator(prefix []byte) KVIterator
+	}
+)
 
 // CopyAll flushes KVIterator to KVWriter. It is up to the iterator correctly stop iterating
 func CopyAll(dst KVWriter, src KVIterator) {
