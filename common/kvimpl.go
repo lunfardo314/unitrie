@@ -7,21 +7,26 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 )
 
 // ----------------------------------------------------------------------------
 // InMemoryKVStore is a KVStore implementation. Mostly used for testing
 var (
-	_ KVStore          = InMemoryKVStore{}
-	_ BatchedUpdatable = InMemoryKVStore{}
-	_ Traversable      = InMemoryKVStore{}
+	_ KVStore          = &InMemoryKVStore{}
+	_ BatchedUpdatable = &InMemoryKVStore{}
+	_ Traversable      = &InMemoryKVStore{}
 	_ KVBatchedWriter  = &simpleBatchedMemoryWriter{}
 	_ KVIterator       = &simpleInMemoryIterator{}
 )
 
 type (
-	InMemoryKVStore map[string][]byte
+	// InMemoryKVStore is thread-safe
+	InMemoryKVStore struct {
+		mutex sync.RWMutex
+		m     map[string][]byte
+	}
 
 	mutation struct {
 		key   []byte
@@ -29,50 +34,68 @@ type (
 	}
 
 	simpleBatchedMemoryWriter struct {
-		store     InMemoryKVStore
+		store     *InMemoryKVStore
 		mutations []mutation
 	}
 
 	simpleInMemoryIterator struct {
-		store  InMemoryKVStore
+		store  *InMemoryKVStore
 		prefix []byte
 	}
 )
 
-func NewInMemoryKVStore() InMemoryKVStore {
-	return make(InMemoryKVStore)
+func NewInMemoryKVStore() *InMemoryKVStore {
+	return &InMemoryKVStore{
+		mutex: sync.RWMutex{},
+		m:     make(map[string][]byte),
+	}
 }
 
-func (im InMemoryKVStore) Get(k []byte) []byte {
-	return im[string(k)]
+func (im *InMemoryKVStore) Get(k []byte) []byte {
+	im.mutex.RLock()
+	defer im.mutex.RUnlock()
+
+	return im.m[string(k)]
 }
 
-func (im InMemoryKVStore) Has(k []byte) bool {
-	_, ok := im[string(k)]
+func (im *InMemoryKVStore) Has(k []byte) bool {
+	im.mutex.RLock()
+	defer im.mutex.RUnlock()
+
+	_, ok := im.m[string(k)]
 	return ok
 }
 
-func (im InMemoryKVStore) Iterate(f func(k []byte, v []byte) bool) {
-	for k, v := range im {
+func (im *InMemoryKVStore) Iterate(f func(k []byte, v []byte) bool) {
+	im.mutex.RLock()
+	defer im.mutex.RUnlock()
+
+	for k, v := range im.m {
 		if !f([]byte(k), v) {
 			return
 		}
 	}
 }
 
-func (im InMemoryKVStore) IterateKeys(f func(k []byte) bool) {
-	for k := range im {
+func (im *InMemoryKVStore) IterateKeys(f func(k []byte) bool) {
+	im.mutex.RLock()
+	defer im.mutex.RUnlock()
+
+	for k := range im.m {
 		if !f([]byte(k)) {
 			return
 		}
 	}
 }
 
-func (im InMemoryKVStore) Set(k, v []byte) {
+func (im *InMemoryKVStore) Set(k, v []byte) {
+	im.mutex.Lock()
+	defer im.mutex.Unlock()
+
 	if len(v) != 0 {
-		im[string(k)] = v
+		im.m[string(k)] = v
 	} else {
-		delete(im, string(k))
+		delete(im.m, string(k))
 	}
 }
 
@@ -84,25 +107,28 @@ func (bw *simpleBatchedMemoryWriter) Set(key, value []byte) {
 }
 
 func (bw *simpleBatchedMemoryWriter) Commit() error {
+	bw.store.mutex.Lock()
+	defer bw.store.mutex.Unlock()
+
 	for _, m := range bw.mutations {
 		if len(m.value) > 0 {
-			bw.store[string(m.key)] = m.value
+			bw.store.m[string(m.key)] = m.value
 		} else {
-			delete(bw.store, string(m.key))
+			delete(bw.store.m, string(m.key))
 		}
 	}
 	bw.mutations = make([]mutation, 0)
 	return nil
 }
 
-func (im InMemoryKVStore) BatchedWriter() KVBatchedWriter {
+func (im *InMemoryKVStore) BatchedWriter() KVBatchedWriter {
 	return &simpleBatchedMemoryWriter{
 		store:     im,
 		mutations: make([]mutation, 0),
 	}
 }
 
-func (im InMemoryKVStore) Iterator(prefix []byte) KVIterator {
+func (im *InMemoryKVStore) Iterator(prefix []byte) KVIterator {
 	return &simpleInMemoryIterator{
 		store:  im,
 		prefix: prefix,
@@ -110,8 +136,11 @@ func (im InMemoryKVStore) Iterator(prefix []byte) KVIterator {
 }
 
 func (si *simpleInMemoryIterator) Iterate(f func(k []byte, v []byte) bool) {
+	si.store.mutex.RLock()
+	defer si.store.mutex.RUnlock()
+
 	var key []byte
-	for k, v := range si.store {
+	for k, v := range si.store.m {
 		key = []byte(k)
 		if bytes.HasPrefix(key, si.prefix) {
 			if !f(key, v) {
@@ -122,8 +151,11 @@ func (si *simpleInMemoryIterator) Iterate(f func(k []byte, v []byte) bool) {
 }
 
 func (si *simpleInMemoryIterator) IterateKeys(f func(k []byte) bool) {
+	si.store.mutex.RLock()
+	defer si.store.mutex.RUnlock()
+
 	var key []byte
-	for k := range si.store {
+	for k := range si.store.m {
 		key = []byte(k)
 		if bytes.HasPrefix(key, si.prefix) {
 			if !f(key) {
