@@ -90,6 +90,25 @@ func Concat(par ...interface{}) []byte {
 	return buf.Bytes()
 }
 
+// ConcatBytes allocates exact size array
+func ConcatBytes(data ...[]byte) []byte {
+	size := 0
+	for _, d := range data {
+		size += len(d)
+	}
+	ret := make([]byte, 0, size)
+	for _, d := range data {
+		ret = append(ret, d...)
+	}
+	return ret
+}
+
+func CloneBytes(data []byte) []byte {
+	ret := make([]byte, len(data))
+	copy(ret, data)
+	return ret
+}
+
 // ByteSize computes byte size of the serialized key/value iterator
 // assumes 2 bytes per key length and 4 bytes per value length
 func ByteSize(s KVIterator) int {
