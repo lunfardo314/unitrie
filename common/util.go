@@ -411,13 +411,15 @@ func CatchPanicOrError(f func() error) error {
 	return err
 }
 
-func RequireErrorWith(t *testing.T, err error, s string) {
+func RequireErrorWith(t *testing.T, err error, fragments ...string) {
 	require.Error(t, err)
-	require.Contains(t, err.Error(), s)
+	for _, f := range fragments {
+		require.Contains(t, err.Error(), f)
+	}
 }
 
-func RequirePanicOrErrorWith(t *testing.T, f func() error, s string) {
-	RequireErrorWith(t, CatchPanicOrError(f), s)
+func RequirePanicOrErrorWith(t *testing.T, f func() error, fragments ...string) {
+	RequireErrorWith(t, CatchPanicOrError(f), fragments...)
 }
 
 func Assert(cond bool, format string, args ...interface{}) {
