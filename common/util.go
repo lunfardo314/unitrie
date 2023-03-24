@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -428,6 +429,10 @@ func Assert(cond bool, format string, args ...interface{}) {
 	}
 }
 
-func AssertNoError(err error) {
-	Assert(err == nil, "error: %v", err)
+func AssertNoError(err error, prefix ...string) {
+	pref := "error: "
+	if len(prefix) > 0 {
+		pref = strings.Join(prefix, " ") + ": "
+	}
+	Assert(err == nil, pref+"%v", err)
 }
