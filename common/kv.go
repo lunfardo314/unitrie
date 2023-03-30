@@ -19,10 +19,15 @@ type (
 		Set(key, value []byte)
 	}
 
-	// KVIterator is an interface to iterate through a set of key/value pairs.
+	// KVIteratorBase is an interface to iterate through the collection of key/value pairs, probably with duplicate keys.
 	// Order of iteration is NON-DETERMINISTIC in general
-	KVIterator interface {
+	KVIteratorBase interface {
 		Iterate(func(k, v []byte) bool)
+	}
+
+	// KVIterator normally implements iteration over k/v collection with unique keys
+	KVIterator interface {
+		KVIteratorBase
 		IterateKeys(func(k []byte) bool)
 	}
 

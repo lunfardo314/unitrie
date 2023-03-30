@@ -30,6 +30,13 @@ func (tr *TrieUpdatable) Delete(key []byte) {
 	tr.delete(common.UnpackBytes(key, tr.PathArity()))
 }
 
+func (tr *TrieUpdatable) UpdateMulti(mut common.Mutations) {
+	mut.Iterate(func(k []byte, v []byte) bool {
+		tr.Update(k, v)
+		return true
+	})
+}
+
 // DeletePrefix deletes all kv pairs with the prefix. It is a very fast operation, it modifies only one node
 // and all children (any number) disappears from the next root
 func (tr *TrieUpdatable) DeletePrefix(pathPrefix []byte) bool {
