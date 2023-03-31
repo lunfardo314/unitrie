@@ -92,6 +92,10 @@ func (im *InMemoryKVStore) Set(k, v []byte) {
 	im.mutex.Lock()
 	defer im.mutex.Unlock()
 
+	im.set(k, v)
+}
+
+func (im *InMemoryKVStore) set(k, v []byte) {
 	if len(v) != 0 {
 		im.m[string(k)] = v
 	} else {
@@ -114,7 +118,11 @@ func (bw *simpleBatchedMemoryWriter) Commit() error {
 	bw.store.mutex.Lock()
 	defer bw.store.mutex.Unlock()
 
-	bw.mutations.WriteTo(bw.store)
+	bw.mutations.Iterate(func(k []byte, v []byte) bool {
+		bw.store.set(k, v)
+		return true
+	})
+
 	bw.mutations = nil // invalidate
 	return nil
 }
