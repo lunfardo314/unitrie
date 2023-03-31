@@ -65,7 +65,7 @@ func (n *NodeData) String() string {
 		n.Commitment, string(n.PathFragment), childIdx, t)
 }
 
-// Read/Write implements optimized serialization of the trie node
+// Read/WriteTo implements optimized serialization of the trie node
 // The serialization of the node takes advantage of the fact that most of the
 // nodes has just few children.
 // the 'smallFlags' (1 byte) contains information:

@@ -1,6 +1,9 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type Mutations struct {
 	set                 map[string][]byte
@@ -17,6 +20,12 @@ func NewMutations(doubleBookingCallback ...func(error)) *Mutations {
 		ret.mustNoDoubleBooking = doubleBookingCallback[0]
 	}
 	return ret
+}
+
+func NewMutationsMustNoDoubleBooking() *Mutations {
+	return NewMutations(func(err error) {
+		panic(err)
+	})
 }
 
 func (m *Mutations) Set(k, v []byte) {
@@ -54,7 +63,7 @@ func (m *Mutations) Iterate(fun func(k []byte, v []byte) bool) {
 	}
 }
 
-func (m *Mutations) Write(w KVWriter) {
+func (m *Mutations) WriteTo(w KVWriter) {
 	for k, v := range m.set {
 		w.Set([]byte(k), v)
 	}
@@ -69,4 +78,17 @@ func (m *Mutations) LenSet() int {
 
 func (m *Mutations) LenDel() int {
 	return len(m.del)
+}
+
+func (m *Mutations) String() string {
+	ret := make([]string, 0)
+	m.Iterate(func(k []byte, v []byte) bool {
+		if len(v) > 0 {
+			ret = append(ret, fmt.Sprintf("SET '%s' = '%s'", string(k), string(v)))
+		} else {
+			ret = append(ret, fmt.Sprintf("DEL '%s'", string(k)))
+		}
+		return true
+	})
+	return strings.Join(ret, "\n")
 }
