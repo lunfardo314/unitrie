@@ -35,7 +35,7 @@ type (
 
 	simpleBatchedMemoryWriter struct {
 		store     *InMemoryKVStore
-		mutations []mutation
+		mutations *Mutations
 	}
 
 	simpleInMemoryIterator struct {
@@ -107,32 +107,28 @@ func (im *InMemoryKVStore) Len() int {
 }
 
 func (bw *simpleBatchedMemoryWriter) Set(key, value []byte) {
-	bw.mutations = append(bw.mutations, mutation{
-		key:   key,
-		value: value,
-	})
+	bw.mutations.Set(key, value)
 }
 
 func (bw *simpleBatchedMemoryWriter) Commit() error {
 	bw.store.mutex.Lock()
 	defer bw.store.mutex.Unlock()
 
-	for _, m := range bw.mutations {
-		if len(m.value) > 0 {
-			bw.store.m[string(m.key)] = m.value
-		} else {
-			delete(bw.store.m, string(m.key))
-		}
-	}
-	bw.mutations = make([]mutation, 0)
+	bw.mutations.WriteTo(bw.store)
+	bw.mutations = nil // invalidate
 	return nil
 }
 
-func (im *InMemoryKVStore) BatchedWriter() KVBatchedWriter {
-	return &simpleBatchedMemoryWriter{
-		store:     im,
-		mutations: make([]mutation, 0),
+func (im *InMemoryKVStore) BatchedWriter(buffer ...*Mutations) KVBatchedWriter {
+	ret := &simpleBatchedMemoryWriter{
+		store: im,
 	}
+	if len(buffer) > 0 {
+		ret.mutations = buffer[0]
+	} else {
+		ret.mutations = NewMutations()
+	}
+	return ret
 }
 
 func (im *InMemoryKVStore) Iterator(prefix []byte) KVIterator {
