@@ -119,15 +119,11 @@ func (bw *simpleBatchedMemoryWriter) Commit() error {
 	return nil
 }
 
-func (im *InMemoryKVStore) BatchedWriter(buffer ...*Mutations) KVBatchedWriter {
+func (im *InMemoryKVStore) BatchedWriter() KVBatchedWriter {
 	ret := &simpleBatchedMemoryWriter{
 		store: im,
 	}
-	if len(buffer) > 0 {
-		ret.mutations = buffer[0]
-	} else {
-		ret.mutations = NewMutations()
-	}
+	ret.mutations = NewMutations()
 	return ret
 }
 

@@ -53,7 +53,7 @@ type (
 	// BatchedUpdatable is a KVStore equipped with the batched update capability. You can only update
 	// BatchedUpdatable in atomic batches
 	BatchedUpdatable interface {
-		BatchedWriter(...*Mutations) KVBatchedWriter
+		BatchedWriter() KVBatchedWriter
 	}
 
 	// Traversable is an interface which provides with partial iterators
