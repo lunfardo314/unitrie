@@ -30,7 +30,7 @@ func (tr *TrieUpdatable) Delete(key []byte) {
 	tr.delete(common.UnpackBytes(key, tr.PathArity()))
 }
 
-func (tr *TrieUpdatable) UpdateMulti(mut common.Mutations) {
+func (tr *TrieUpdatable) UpdateWithMutations(mut *common.Mutations) {
 	mut.Iterate(func(k []byte, v []byte) bool {
 		tr.Update(k, v)
 		return true
