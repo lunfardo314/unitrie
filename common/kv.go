@@ -31,7 +31,7 @@ type (
 		IterateKeys(func(k []byte) bool)
 	}
 
-	// KVBatchedWriter collects mutations in the buffer via Set-s to KVWriter and then flushes (applies) it atomically to DB with Commit
+	// KVBatchedWriter collects Mutations in the buffer via Set-s to KVWriter and then flushes (applies) it atomically to DB with Commit
 	// KVBatchedWriter implementation should be deterministic: the sequence of Set-s to KWWriter exactly determines
 	// the sequence, how key/value pairs in the database are updated or deleted (with value == nil)
 	KVBatchedWriter interface {

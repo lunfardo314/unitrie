@@ -423,10 +423,14 @@ func RequirePanicOrErrorWith(t *testing.T, f func() error, fragments ...string) 
 	RequireErrorWith(t, CatchPanicOrError(f), fragments...)
 }
 
-func Assert(cond bool, format string, args ...interface{}) {
+func Assert(cond bool, format string, args ...any) {
 	if !cond {
 		panic(fmt.Sprintf("assertion failed:: "+format, args...))
 	}
+}
+
+func Panicf(format string, args ...any) {
+	panic(fmt.Sprintf(format, args...))
 }
 
 func AssertNoError(err error, prefix ...string) {

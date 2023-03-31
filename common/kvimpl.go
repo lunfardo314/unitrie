@@ -19,8 +19,6 @@ var (
 	_ Traversable      = &InMemoryKVStore{}
 	_ KVBatchedWriter  = &simpleBatchedMemoryWriter{}
 	_ KVIterator       = &simpleInMemoryIterator{}
-	_ KVWriter         = &Mutations{}
-	_ KVIteratorBase   = &Mutations{}
 )
 
 type (
@@ -29,8 +27,6 @@ type (
 		mutex sync.RWMutex
 		m     map[string][]byte
 	}
-
-	Mutations []mutation
 
 	mutation struct {
 		key   []byte
@@ -47,36 +43,6 @@ type (
 		prefix []byte
 	}
 )
-
-func NewMutations() Mutations {
-	return make(Mutations, 0)
-}
-
-func (m *Mutations) Set(k, v []byte) {
-	*m = append(*m, mutation{
-		key:   k,
-		value: v,
-	})
-}
-
-func (m *Mutations) Iterate(fun func(k []byte, v []byte) bool) {
-	for i := range *m {
-		if !fun((*m)[i].key, (*m)[i].value) {
-			return
-		}
-	}
-}
-
-func (m *Mutations) Len() int {
-	return len(*m)
-}
-
-func (m *Mutations) Write(w KVWriter) {
-	m.Iterate(func(k []byte, v []byte) bool {
-		w.Set(k, v)
-		return true
-	})
-}
 
 func NewInMemoryKVStore() *InMemoryKVStore {
 	return &InMemoryKVStore{
