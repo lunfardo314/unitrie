@@ -45,9 +45,9 @@ type (
 		KVWriter
 	}
 
-	KVStoreWithIteration interface {
-		KVStore
-		KVIterator
+	KVTraversableReader interface {
+		KVReader
+		Traversable
 	}
 
 	// BatchedUpdatable is a KVStore equipped with the batched update capability. You can only update
@@ -86,6 +86,32 @@ func (p *readerPartition) Has(key []byte) bool {
 func MakeReaderPartition(r KVReader, prefix byte) KVReader {
 	return &readerPartition{
 		prefix: prefix,
+		r:      r,
+	}
+}
+
+var _ KVTraversableReader = &traversableReaderPartition{}
+
+type traversableReaderPartition struct {
+	prefix byte
+	r      KVTraversableReader
+}
+
+func (p *traversableReaderPartition) Get(key []byte) []byte {
+	return p.r.Get(Concat(p.prefix, key))
+}
+
+func (p *traversableReaderPartition) Has(key []byte) bool {
+	return p.r.Has(Concat(p.prefix, key))
+}
+
+func (p *traversableReaderPartition) Iterator(iterPrefix []byte) KVIterator {
+	return p.r.Iterator(Concat(p.prefix, iterPrefix))
+}
+
+func MakeTraversableReaderPartition(r KVTraversableReader, p byte) KVTraversableReader {
+	return &traversableReaderPartition{
+		prefix: p,
 		r:      r,
 	}
 }
