@@ -92,13 +92,9 @@ func (tr *TrieReader) Has(key []byte) bool {
 }
 
 // HasWithPrefix check existence of at least one key with specified prefix in the trie
+// Deprecated: use function HasWithPrefix
 func (tr *TrieReader) HasWithPrefix(prefix []byte) bool {
-	ret := false
-	tr.iteratePrefix(func(_, _ []byte) bool {
-		ret = true
-		return false
-	}, prefix, false)
-	return ret
+	return common.HasWithPrefix(tr, prefix)
 }
 
 // Iterate iterates all the key/value pairs in the trie
