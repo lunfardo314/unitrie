@@ -131,3 +131,12 @@ func MakeWriterPartition(w KVWriter, prefix byte) KVWriter {
 		w:      w,
 	}
 }
+
+func HasWithPrefix(r Traversable, prefix []byte) bool {
+	ret := false
+	r.Iterator(prefix).IterateKeys(func(_ []byte) bool {
+		ret = true
+		return false
+	})
+	return ret
+}
