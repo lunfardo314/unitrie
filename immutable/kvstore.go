@@ -9,30 +9,41 @@ import (
 )
 
 // Update updates TrieUpdatable with the unpackedKey/value. Reorganizes and re-calculates trie, keeps cache consistent
-func (tr *TrieUpdatable) Update(key []byte, value []byte) {
+func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
 	common.Assert(!common.IsNil(tr.persistentRoot), "Update:: updatable trie has been invalidated")
 	common.Assert(len(key) > 0, "identity of the state can't be changed")
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
 	if len(value) == 0 {
-		tr.delete(unpackedTriePath)
-	} else {
-		tr.update(unpackedTriePath, value)
+		return tr.delete(unpackedTriePath)
 	}
+	tr.update(unpackedTriePath, value)
+	return true
 }
 
 // Delete deletes Key/value from the TrieUpdatable
-func (tr *TrieUpdatable) Delete(key []byte) {
+// Returns true if deleted, false if key wasn't found
+func (tr *TrieUpdatable) Delete(key []byte) bool {
 	common.Assert(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie has been invalidated")
-	if len(key) == 0 {
-		// we do not want to delete root
-		return
-	}
-	tr.delete(common.UnpackBytes(key, tr.PathArity()))
+	common.Assert(len(key) > 0, "can't delete root")
+	return tr.delete(common.UnpackBytes(key, tr.PathArity()))
 }
 
-func (tr *TrieUpdatable) UpdateWithMutations(mut *common.Mutations) {
-	mut.Iterate(func(k []byte, v []byte) bool {
-		tr.Update(k, v)
+// UpdateWithMutations updates trie by first iterating set-s and the del-s.
+// Optionally, invokes onDeleteKeyNotFound callback if attempted to delete key does not exist in the
+// original state.
+// By using onDeleteKeyNotFound we can require existence of every key which
+// is deleted from the trie. This is the case when trie represents UTXO ledger state
+func (tr *TrieUpdatable) UpdateWithMutations(mut *common.Mutations, onDeleteKeyNotFound ...func([]byte) bool) {
+	mut.Iterate(func(k []byte, v []byte, wasSet bool) bool {
+		deleted := tr.Update(k, v)
+		// if !deleted means key was to be deleted but was not present in the trie
+		// !wasSet means it was not set by mutations and therefore expected to be in the trie
+		if !deleted && !wasSet && len(onDeleteKeyNotFound) > 0 {
+			// means key was attempted to delete but wasn't present
+			if !onDeleteKeyNotFound[0](k) {
+				return false
+			}
+		}
 		return true
 	})
 }
@@ -236,7 +247,7 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) {
 	}
 }
 
-func (tr *TrieUpdatable) delete(triePath []byte) {
+func (tr *TrieUpdatable) delete(triePath []byte) bool {
 	nodes := make([]*bufferedNode, 0)
 	var ends common.PathEndingCode
 	tr.traverseMutatedPath(triePath, func(n *bufferedNode, ending common.PathEndingCode) {
@@ -246,7 +257,7 @@ func (tr *TrieUpdatable) delete(triePath []byte) {
 	common.Assert(len(nodes) > 0, "len(nodes) > 0")
 	if ends != common.EndingTerminal {
 		// the key is not present in the trie, do nothing
-		return
+		return false
 	}
 
 	nodes[len(nodes)-1].setValue(nil, tr.Model())
@@ -262,6 +273,7 @@ func (tr *TrieUpdatable) delete(triePath []byte) {
 		}
 	}
 	common.Assert(nodes[0] != nil, "please do not delete root")
+	return true
 }
 
 func (tr *TrieUpdatable) mergeNodeIfNeeded(node *bufferedNode) *bufferedNode {

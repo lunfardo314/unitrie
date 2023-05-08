@@ -49,17 +49,27 @@ func (m *Mutations) Set(k, v []byte) {
 		delete(m.del, ks)
 		m.set[ks] = v
 	} else {
-		delete(m.set, ks)
+		if _, wasSet := m.set[ks]; wasSet {
+			m.set[ks] = nil // storing information it was set before delete
+		}
 		m.del[ks] = struct{}{}
 	}
 }
 
-func (m *Mutations) Iterate(fun func(k []byte, v []byte) bool) {
+// Iterate is special iteration for mutations. It first iterates SET mutations, then DEL mutations
+// On SET mutation, k, v != nil and wasSet = true
+// On DEL mutation, k != nil, v == nil. wasSet is true if value was set before delete, otherwise false
+// The wasSet allows control deletion of keys which must exist in the original state, e.g. UTXO ledger state
+func (m *Mutations) Iterate(fun func(k []byte, v []byte, wasSet bool) bool) {
 	for k, v := range m.set {
-		fun([]byte(k), v)
+		if len(v) > 0 {
+			fun([]byte(k), v, true)
+		}
 	}
 	for k := range m.del {
-		fun([]byte(k), nil)
+		v, wasSet := m.set[k]
+		Assert(len(v) == 0, "len(v)==0")
+		fun([]byte(k), nil, wasSet)
 	}
 }
 
@@ -82,11 +92,11 @@ func (m *Mutations) LenDel() int {
 
 func (m *Mutations) String() string {
 	ret := make([]string, 0)
-	m.Iterate(func(k []byte, v []byte) bool {
+	m.Iterate(func(k []byte, v []byte, wasSet bool) bool {
 		if len(v) > 0 {
 			ret = append(ret, fmt.Sprintf("SET '%s' = '%s'", string(k), string(v)))
 		} else {
-			ret = append(ret, fmt.Sprintf("DEL '%s'", string(k)))
+			ret = append(ret, fmt.Sprintf("DEL '%s' (wasSet = %v)", string(k), wasSet))
 		}
 		return true
 	})

@@ -118,7 +118,7 @@ func (bw *simpleBatchedMemoryWriter) Commit() error {
 	bw.store.mutex.Lock()
 	defer bw.store.mutex.Unlock()
 
-	bw.mutations.Iterate(func(k []byte, v []byte) bool {
+	bw.mutations.Iterate(func(k []byte, v []byte, _ bool) bool {
 		bw.store.set(k, v)
 		return true
 	})

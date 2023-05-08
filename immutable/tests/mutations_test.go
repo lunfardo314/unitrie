@@ -17,7 +17,7 @@ func TestMutations(t *testing.T) {
 		mut.Set([]byte("ab"), []byte("2"))
 		mut.Set([]byte("a"), nil)
 		mut.Set([]byte("abc"), []byte("3"))
-		require.EqualValues(t, 2, mut.LenSet())
+		require.EqualValues(t, 3, mut.LenSet())
 		require.EqualValues(t, 1, mut.LenDel())
 
 		s := common.NewInMemoryKVStore()
@@ -81,4 +81,26 @@ func TestMutations(t *testing.T) {
 		}, "repetitive DEL mutation")
 		t.Logf("\n%s", mut1.String())
 	})
+	t.Run("iterate", func(t *testing.T) {
+		mut := common.NewMutationsMustNoDoubleBooking()
+		mut.Set([]byte("a"), nil)
+		mut.Iterate(func(k []byte, v []byte, wasSet bool) bool {
+			require.False(t, wasSet)
+			return true
+		})
+		mut = common.NewMutationsMustNoDoubleBooking()
+		mut.Set([]byte("a"), []byte("a"))
+		mut.Set([]byte("a"), nil)
+		mut.Set([]byte("c"), nil)
+		mut.Set([]byte("b"), []byte("b"))
+		mut.Iterate(func(k []byte, v []byte, wasSet bool) bool {
+			if string(k) == "c" {
+				require.False(t, wasSet)
+			} else {
+				require.True(t, wasSet)
+			}
+			return true
+		})
+	})
+
 }

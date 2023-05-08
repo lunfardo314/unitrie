@@ -37,13 +37,19 @@ func TestDeletedKey(t *testing.T) {
 	{
 		tr, err := immutable.NewTrieChained(m, store, root1)
 		require.NoError(t, err)
-		tr.Update([]byte("a"), nil)
+		deleted := tr.Update([]byte("a"), nil)
+		require.True(t, deleted)
 		tr.Update([]byte("b"), []byte("bb"))
 		tr.Update([]byte("c"), []byte("c"))
 		tr = tr.CommitChained()
 		root2 = tr.Root()
 
 		require.Nil(t, tr.Get([]byte("a")))
+		deleted = tr.Update([]byte("a"), nil)
+		require.False(t, deleted)
+
+		deleted = tr.Delete([]byte("a"))
+		require.False(t, deleted)
 	}
 
 	state, err := immutable.NewTrieReader(m, store, root2)
