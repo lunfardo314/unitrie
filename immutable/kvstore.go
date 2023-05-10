@@ -16,36 +16,15 @@ func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
 	if len(value) == 0 {
 		return tr.delete(unpackedTriePath)
 	}
-	tr.update(unpackedTriePath, value)
-	return true
+	return tr.update(unpackedTriePath, value)
 }
 
 // Delete deletes Key/value from the TrieUpdatable
-// Returns true if deleted, false if key wasn't found
+// Returns true if key existed, false otherwise
 func (tr *TrieUpdatable) Delete(key []byte) bool {
 	common.Assert(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie has been invalidated")
 	common.Assert(len(key) > 0, "can't delete root")
 	return tr.delete(common.UnpackBytes(key, tr.PathArity()))
-}
-
-// UpdateWithMutations updates trie by first iterating set-s and the del-s.
-// Optionally, invokes onDeleteKeyNotFound callback if attempted to delete key does not exist in the
-// original state.
-// By using onDeleteKeyNotFound we can require existence of every key which
-// is deleted from the trie. This is the case when trie represents UTXO ledger state
-func (tr *TrieUpdatable) UpdateWithMutations(mut *common.Mutations, onDeleteKeyNotFound ...func([]byte) bool) {
-	mut.Iterate(func(k []byte, v []byte, wasSet bool) bool {
-		deleted := tr.Update(k, v)
-		// if !deleted means key was to be deleted but was not present in the trie
-		// !wasSet means it was not set by mutations and therefore expected to be in the trie
-		if !deleted && !wasSet && len(onDeleteKeyNotFound) > 0 {
-			// means key was attempted to delete but wasn't present
-			if !onDeleteKeyNotFound[0](k) {
-				return false
-			}
-		}
-		return true
-	})
 }
 
 // DeletePrefix deletes all kv pairs with the prefix. It is a very fast operation, it modifies only one node
@@ -177,7 +156,8 @@ func (tr *TrieReader) Snapshot(destStore common.KVWriter) {
 	})
 }
 
-func (tr *TrieUpdatable) update(triePath []byte, value []byte) {
+// update updates trie. Returns true if key existed already, otherwise false
+func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 	common.Assert(len(value) > 0, "len(value)>0")
 
 	nodes := make([]*bufferedNode, 0)
@@ -191,10 +171,12 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) {
 		nodes[i].setModifiedChild(nodes[i+1])
 	}
 	lastNode := nodes[len(nodes)-1]
+	keyExisted := false
 	switch ends {
 	case common.EndingTerminal:
 		// reached the end just for the terminal
 		lastNode.setValue(value, tr.Model())
+		keyExisted = true
 
 	case common.EndingExtend:
 		// extend the current node with the new terminal node
@@ -245,6 +227,7 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) {
 	default:
 		common.Assert(false, "inconsistency: wrong value")
 	}
+	return keyExisted
 }
 
 func (tr *TrieUpdatable) delete(triePath []byte) bool {

@@ -14,6 +14,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestKeyExistence(t *testing.T) {
+	store := common.NewInMemoryKVStore()
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160)
+
+	root := immutable.MustInitRoot(store, m, []byte("identity"))
+	tr, err := immutable.NewTrieChained(m, store, root)
+	require.NoError(t, err)
+	existed := tr.Update([]byte("a"), []byte("a"))
+	require.False(t, existed)
+	existed = tr.Update([]byte("b"), []byte("b"))
+	require.False(t, existed)
+	tr = tr.CommitChained()
+
+	existed = tr.Update([]byte("b"), []byte("bbb"))
+	require.True(t, existed)
+	tr = tr.CommitChained()
+
+	existed = tr.Delete([]byte("c"))
+	require.False(t, existed)
+	existed = tr.Delete([]byte("b"))
+	require.True(t, existed)
+
+}
+
 func TestDeletedKey(t *testing.T) {
 	store := common.NewInMemoryKVStore()
 	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160)

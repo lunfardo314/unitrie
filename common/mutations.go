@@ -56,6 +56,16 @@ func (m *Mutations) Set(k, v []byte) {
 	}
 }
 
+// TODO correctly manage DEL mutations
+
+func (m *Mutations) Apply(mut *Mutations) {
+	mut.Iterate(func(k []byte, v []byte, _ bool) bool {
+		Assert(len(v) > 0, "len(v)>0")
+		m.Set(k, v)
+		return true
+	})
+}
+
 // Iterate is special iteration for mutations. It first iterates SET mutations, then DEL mutations
 // On SET mutation, k, v != nil and wasSet = true
 // On DEL mutation, k != nil, v == nil. wasSet is true if value was set before delete, otherwise false
