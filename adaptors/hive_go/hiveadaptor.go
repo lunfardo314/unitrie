@@ -1,5 +1,5 @@
-// Package hive_adaptor contains adaptor interfaces with the key/value interfaces implemented in the `hive.go` repository.
-package hive_adaptor
+// Package hive_go contains adaptor interfaces with the key/value interfaces implemented in the `hive.go` repository.
+package hive_go
 
 import (
 	"errors"

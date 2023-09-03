@@ -11,8 +11,8 @@ import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/kvstore/badger"
 	"github.com/iotaledger/hive.go/core/kvstore/mapdb"
-	model2 "github.com/lunfardo314/unitrie/common"
-	"github.com/lunfardo314/unitrie/hive_adaptor"
+	"github.com/lunfardo314/unitrie/adaptors/hive_go"
+	"github.com/lunfardo314/unitrie/common"
 	"github.com/lunfardo314/unitrie/models/trie_blake2b"
 	"github.com/lunfardo314/unitrie/models/trie_blake2b/trie_blake2b_verify"
 	"github.com/lunfardo314/unitrie/mutable"
@@ -56,14 +56,14 @@ func main() {
 		os.Exit(1)
 	}
 	name = tail[1]
-	var arity model2.PathArity
+	var arity common.PathArity
 	switch *arityPar {
 	case 2:
-		arity = model2.PathArity2
+		arity = common.PathArity2
 	case 16:
-		arity = model2.PathArity16
+		arity = common.PathArity16
 	case 256:
-		arity = model2.PathArity256
+		arity = common.PathArity256
 	default:
 		fmt.Printf(usage)
 		os.Exit(1)
@@ -126,13 +126,13 @@ const (
 )
 
 func genrnd() {
-	rndIterator := model2.NewRandStreamIterator(model2.RandStreamParams{
+	rndIterator := common.NewRandStreamIterator(common.RandStreamParams{
 		Seed:       time.Now().UnixNano(),
 		NumKVPairs: *num,
 		MaxKey:     *maxKey,
 		MaxValue:   *maxValue,
 	})
-	fileWriter, err := model2.CreateKVStreamFile(fname)
+	fileWriter, err := common.CreateKVStreamFile(fname)
 	must(err)
 	defer func() { _ = fileWriter.Close() }()
 
@@ -215,8 +215,8 @@ func scandbbadger() {
 	defer func() { _ = db.Close() }()
 
 	kvs := badger.New(db)
-	trieKVS := hive_adaptor.NewHiveKVStoreAdaptor(kvs, triePrefix)
-	valueKVS := hive_adaptor.NewHiveKVStoreAdaptor(kvs, valueStorePrefix)
+	trieKVS := hive_go.NewHiveKVStoreAdaptor(kvs, triePrefix)
+	valueKVS := hive_go.NewHiveKVStoreAdaptor(kvs, valueStorePrefix)
 
 	//trie.DangerouslyDumpToConsole("----- VALUES ------", valueKVS)
 	//trie.DangerouslyDumpToConsole("----- TRIE ------", trieKVS)
@@ -283,14 +283,14 @@ var (
 )
 
 func file2kvs(kvs kvstore.KVStore) {
-	streamIn, err := model2.OpenKVStreamFile(fname)
+	streamIn, err := common.OpenKVStreamFile(fname)
 	must(err)
 	defer func() { _ = streamIn.Close() }()
 
 	tm := newTimer()
 	counterRec := 1
-	tr := mutable.NewTrieReader(model, hive_adaptor.NewHiveKVStoreAdaptor(kvs, triePrefix), nil)
-	updater, err := hive_adaptor.NewHiveBatchedUpdater(kvs, model, triePrefix, valueStorePrefix)
+	tr := mutable.NewTrieReader(model, hive_go.NewHiveKVStoreAdaptor(kvs, triePrefix), nil)
+	updater, err := hive_go.NewHiveBatchedUpdater(kvs, model, triePrefix, valueStorePrefix)
 	must(err)
 	var mem runtime.MemStats
 	err = streamIn.Iterate(func(k []byte, v []byte) bool {
@@ -318,7 +318,7 @@ func file2kvs(kvs kvstore.KVStore) {
 }
 
 func file2kvsNoTrie(kvs kvstore.KVStore) {
-	streamIn, err := model2.OpenKVStreamFile(fname)
+	streamIn, err := common.OpenKVStreamFile(fname)
 	must(err)
 	defer func() { _ = streamIn.Close() }()
 
