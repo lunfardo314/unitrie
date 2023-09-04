@@ -43,7 +43,15 @@ func (a *DB) Get(key []byte) []byte {
 }
 
 func (a *DB) Has(key []byte) bool {
-	return len(a.Get(key)) > 0
+	err := a.db.View(func(txn *badger.Txn) error {
+		_, err := txn.Get(key)
+		return err
+	})
+	if errors.Is(err, badger.ErrKeyNotFound) {
+		return false
+	}
+	common.AssertNoError(err)
+	return true
 }
 
 // KVWriter
