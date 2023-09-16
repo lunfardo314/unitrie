@@ -1,6 +1,7 @@
 package badger_adaptor
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/dgraph-io/badger/v4"
@@ -15,6 +16,7 @@ func createDirectoryIfNeeded(dir string) error {
 	return err
 }
 
+// MustCreateOrOpenBadgerDB opens existing DB or creates new empty
 func MustCreateOrOpenBadgerDB(dir string, opt ...badger.Options) *badger.DB {
 	err := createDirectoryIfNeeded(dir)
 	common.AssertNoError(err)
@@ -32,4 +34,24 @@ func MustCreateOrOpenBadgerDB(dir string, opt ...badger.Options) *badger.DB {
 
 func New(db *badger.DB) *DB {
 	return &DB{db: db}
+}
+
+// OpenBadgerDB opens existing Badger DB
+func OpenBadgerDB(dir string, opt ...badger.Options) (*badger.DB, error) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return nil, fmt.Errorf("'%s' does not exist, can't open DB", dir)
+	}
+	var opts badger.Options
+	if len(opt) == 0 {
+		opts = badger.DefaultOptions(dir)
+	} else {
+		opts = opt[0]
+	}
+	opts.Logger = nil
+	db, err := badger.Open(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, err
 }
