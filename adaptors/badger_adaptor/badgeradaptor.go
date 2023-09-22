@@ -2,6 +2,8 @@ package badger_adaptor
 
 import (
 	"errors"
+	"fmt"
+	"sync/atomic"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/lunfardo314/unitrie/common"
@@ -9,25 +11,34 @@ import (
 
 type (
 	DB struct {
-		db *badger.DB
+		*badger.DB
+		closed atomic.Bool
 	}
 
 	badgerAdaptorBatch struct {
-		db  *badger.DB
+		db  *DB
 		mut *common.Mutations
 	}
 
 	badgerAdaptorIterator struct {
-		db     *badger.DB
+		db     *DB
 		prefix []byte
 	}
 )
 
+func (a *DB) Close() error {
+	a.closed.Store(true)
+	return a.DB.Close()
+}
+
 // KVReader
 
 func (a *DB) Get(key []byte) []byte {
+	if a.closed.Load() {
+		return nil
+	}
 	var ret []byte
-	err := a.db.View(func(txn *badger.Txn) error {
+	err := a.DB.View(func(txn *badger.Txn) error {
 		item, err := txn.Get(key)
 		if err != nil {
 			return err
@@ -43,7 +54,10 @@ func (a *DB) Get(key []byte) []byte {
 }
 
 func (a *DB) Has(key []byte) bool {
-	err := a.db.View(func(txn *badger.Txn) error {
+	if a.closed.Load() {
+		return false
+	}
+	err := a.DB.View(func(txn *badger.Txn) error {
 		_, err := txn.Get(key)
 		return err
 	})
@@ -57,7 +71,10 @@ func (a *DB) Has(key []byte) bool {
 // KVWriter
 
 func (a *DB) Set(key, value []byte) {
-	err := a.db.Update(func(txn *badger.Txn) error {
+	if a.closed.Load() {
+		return
+	}
+	err := a.DB.Update(func(txn *badger.Txn) error {
 		return txn.Set(key, value)
 	})
 	common.AssertNoError(err)
@@ -67,7 +84,7 @@ func (a *DB) Set(key, value []byte) {
 
 func (a *DB) BatchedWriter() common.KVBatchedWriter {
 	return &badgerAdaptorBatch{
-		db:  a.db,
+		db:  a,
 		mut: common.NewMutationsMustNoDoubleBooking(),
 	}
 }
@@ -80,6 +97,9 @@ func (b *badgerAdaptorBatch) Set(key, value []byte) {
 
 func (b *badgerAdaptorBatch) Commit() error {
 	return b.db.Update(func(txn *badger.Txn) error {
+		if b.db.closed.Load() {
+			return fmt.Errorf("database is closed")
+		}
 		var err error
 		b.mut.Iterate(func(k []byte, v []byte, _ bool) bool {
 			if len(v) > 0 {
@@ -89,6 +109,9 @@ func (b *badgerAdaptorBatch) Commit() error {
 			}
 			return err == nil
 		})
+		if b.db.closed.Load() {
+			return fmt.Errorf("database is closed")
+		}
 		return err
 	})
 }
@@ -97,7 +120,7 @@ func (b *badgerAdaptorBatch) Commit() error {
 
 func (a *DB) Iterator(prefix []byte) common.KVIterator {
 	return &badgerAdaptorIterator{
-		db:     a.db,
+		db:     a,
 		prefix: prefix,
 	}
 }
@@ -120,11 +143,15 @@ func (it *badgerAdaptorIterator) Iterate(fun func(k []byte, v []byte) bool) {
 				exit = !fun(dbIt.Item().Key(), val)
 				return nil
 			})
-			common.AssertNoError(err)
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	})
-	common.AssertNoError(err)
+	if !it.db.closed.Load() {
+		common.AssertNoError(err)
+	}
 }
 
 func (it *badgerAdaptorIterator) IterateKeys(fun func(k []byte) bool) {
@@ -142,5 +169,7 @@ func (it *badgerAdaptorIterator) IterateKeys(fun func(k []byte) bool) {
 		}
 		return nil
 	})
-	common.AssertNoError(err)
+	if !it.db.closed.Load() {
+		common.AssertNoError(err)
+	}
 }

@@ -33,7 +33,7 @@ func MustCreateOrOpenBadgerDB(dir string, opt ...badger.Options) *badger.DB {
 }
 
 func New(db *badger.DB) *DB {
-	return &DB{db: db}
+	return &DB{DB: db}
 }
 
 // OpenBadgerDB opens existing Badger DB
