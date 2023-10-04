@@ -31,10 +31,14 @@ func (a *DB) Close() error {
 	return a.DB.Close()
 }
 
+func (a *DB) IsClosed() bool {
+	return a.closed.Load()
+}
+
 // KVReader
 
 func (a *DB) Get(key []byte) []byte {
-	if a.closed.Load() {
+	if a.IsClosed() {
 		return nil
 	}
 	var ret []byte
@@ -54,7 +58,7 @@ func (a *DB) Get(key []byte) []byte {
 }
 
 func (a *DB) Has(key []byte) bool {
-	if a.closed.Load() {
+	if a.IsClosed() {
 		return false
 	}
 	err := a.DB.View(func(txn *badger.Txn) error {
@@ -71,7 +75,7 @@ func (a *DB) Has(key []byte) bool {
 // KVWriter
 
 func (a *DB) Set(key, value []byte) {
-	if a.closed.Load() {
+	if a.IsClosed() {
 		return
 	}
 	err := a.DB.Update(func(txn *badger.Txn) error {
@@ -97,7 +101,7 @@ func (b *badgerAdaptorBatch) Set(key, value []byte) {
 
 func (b *badgerAdaptorBatch) Commit() error {
 	return b.db.Update(func(txn *badger.Txn) error {
-		if b.db.closed.Load() {
+		if b.db.IsClosed() {
 			return fmt.Errorf("database is closed")
 		}
 		var err error
@@ -109,7 +113,7 @@ func (b *badgerAdaptorBatch) Commit() error {
 			}
 			return err == nil
 		})
-		if b.db.closed.Load() {
+		if b.db.IsClosed() {
 			return fmt.Errorf("database is closed")
 		}
 		return err
@@ -149,7 +153,7 @@ func (it *badgerAdaptorIterator) Iterate(fun func(k []byte, v []byte) bool) {
 		}
 		return nil
 	})
-	if !it.db.closed.Load() {
+	if !it.db.IsClosed() {
 		common.AssertNoError(err)
 	}
 }
@@ -169,7 +173,7 @@ func (it *badgerAdaptorIterator) IterateKeys(fun func(k []byte) bool) {
 		}
 		return nil
 	})
-	if !it.db.closed.Load() {
+	if !it.db.IsClosed() {
 		common.AssertNoError(err)
 	}
 }

@@ -51,6 +51,10 @@ func NewInMemoryKVStore() *InMemoryKVStore {
 	}
 }
 
+func (im *InMemoryKVStore) IsClosed() bool {
+	return false
+}
+
 func (im *InMemoryKVStore) Get(k []byte) []byte {
 	im.mutex.RLock()
 	defer im.mutex.RUnlock()
