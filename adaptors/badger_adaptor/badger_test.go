@@ -1,9 +1,11 @@
 package badger_adaptor
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/lunfardo314/unitrie/common"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,4 +42,24 @@ func TestBasic(t *testing.T) {
 		v := a.Get([]byte(k))
 		require.EqualValues(t, k+k, string(v))
 	}
+}
+
+func TestClose(t *testing.T) {
+	db := MustCreateOrOpenBadgerDB(dbPath)
+	a := New(db)
+	a.Set([]byte("kuku"), []byte("mumu"))
+	err := a.Close()
+	require.NoError(t, err)
+
+	err = common.CatchPanicOrError(func() error {
+		a.Get([]byte("kuku"))
+		return nil
+	})
+	require.True(t, errors.Is(err, common.ErrDBUnavailable))
+
+	err = common.CatchPanicOrError(func() error {
+		a.Set([]byte("kuku"), []byte("zzz"))
+		return nil
+	})
+	require.True(t, errors.Is(common.ErrDBUnavailable, err))
 }
