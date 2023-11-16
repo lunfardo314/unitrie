@@ -27,13 +27,15 @@ type (
 
 func (a *DB) Get(key []byte) []byte {
 	var ret []byte
-	err := a.DB.View(func(txn *badger.Txn) error {
-		item, err := txn.Get(key)
-		if err != nil {
+	err := common.CatchPanicOrError(func() error {
+		return a.DB.View(func(txn *badger.Txn) error {
+			item, err := txn.Get(key)
+			if err != nil {
+				return err
+			}
+			ret, err = item.ValueCopy(nil)
 			return err
-		}
-		ret, err = item.ValueCopy(nil)
-		return err
+		})
 	})
 	switch {
 	case errors.Is(err, badger.ErrKeyNotFound):
@@ -47,9 +49,11 @@ func (a *DB) Get(key []byte) []byte {
 }
 
 func (a *DB) Has(key []byte) bool {
-	err := a.DB.View(func(txn *badger.Txn) error {
-		_, err := txn.Get(key)
-		return err
+	err := common.CatchPanicOrError(func() error {
+		return a.DB.View(func(txn *badger.Txn) error {
+			_, err := txn.Get(key)
+			return err
+		})
 	})
 	switch {
 	case errors.Is(err, badger.ErrKeyNotFound):
