@@ -425,12 +425,8 @@ func RequirePanicOrErrorWith(t *testing.T, f func() error, fragments ...string) 
 
 func Assert(cond bool, format string, args ...any) {
 	if !cond {
-		panic(fmt.Sprintf("assertion failed:: "+format, args...))
+		panic(fmt.Errorf("assertion failed:: "+format, args...))
 	}
-}
-
-func Panicf(format string, args ...any) {
-	panic(fmt.Sprintf(format, args...))
 }
 
 func AssertNoError(err error, prefix ...string) {
@@ -438,5 +434,5 @@ func AssertNoError(err error, prefix ...string) {
 	if len(prefix) > 0 {
 		pref = strings.Join(prefix, " ") + ": "
 	}
-	Assert(err == nil, pref+"%v", err)
+	Assert(err == nil, pref+"%w", err)
 }
