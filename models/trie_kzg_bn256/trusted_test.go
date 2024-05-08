@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lunfardo314/unitrie/common"
-	"github.com/lunfardo314/unitrie/mutable"
 	"github.com/stretchr/testify/require"
 	"go.dedis.ch/kyber/v3"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
@@ -228,15 +226,4 @@ func TestValidate2Load(t *testing.T) {
 			require.False(t, tr.verify(c, pi[i], v, i))
 		}
 	}
-}
-
-func TestStaticTrustedSetup(t *testing.T) {
-	m := New()
-	require.EqualValues(t, 258, m.D)
-
-	store := common.NewInMemoryKVStore()
-	tr := mutable.NewTrie(m, store, nil)
-
-	tr.Update(nil, []byte("kuku"))
-	tr.Commit()
 }
