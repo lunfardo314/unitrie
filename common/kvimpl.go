@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"math"
@@ -179,18 +180,52 @@ func (si *simpleInMemoryIterator) IterateKeys(f func(k []byte) bool) {
 //----------------------------------------------------------------------------
 // interfaces for writing/reading persistent streams of key/value pairs
 
-// KVStreamWriter represents an interface to write a sequence of key/value pairs
-type KVStreamWriter interface {
-	// Write writes key/value pair
-	Write(key, value []byte) error
-	// Stats return num k/v pairs and num bytes so far
-	Stats() (int, int)
-}
+type (
+	// KVStreamWriter represents an interface to write a sequence of key/value pairs
+	KVStreamWriter interface {
+		// Write writes key/value pair
+		Write(key, value []byte) error
+		// Stats return num k/v pairs and num bytes so far
+		Stats() (int, int)
+	}
 
-// KVStreamIterator is an interface to iterate stream
-// In general, order is non-deterministic
-type KVStreamIterator interface {
-	Iterate(func(k, v []byte) bool) error
+	// KVStreamIterator is an interface to iterate stream
+	// In general, order is non-deterministic
+	KVStreamIterator interface {
+		Iterate(func(k, v []byte) bool) error
+	}
+
+	KVPairOrError struct {
+		error
+		Key   []byte
+		Value []byte
+	}
+)
+
+// KVStreamIteratorToChan makes channel out of KVStreamIterator
+func KVStreamIteratorToChan(iter KVStreamIterator, ctx context.Context) chan KVPairOrError {
+	ret := make(chan KVPairOrError)
+	go func() {
+		err := iter.Iterate(func(k, v []byte) bool {
+			select {
+			case <-ctx.Done():
+				return false
+			default:
+				ret <- KVPairOrError{
+					Key:   k,
+					Value: v,
+				}
+			}
+			return true
+		})
+		if err != nil {
+			ret <- KVPairOrError{
+				error: err,
+			}
+		}
+		close(ret)
+	}()
+	return ret
 }
 
 //----------------------------------------------------------------------------
