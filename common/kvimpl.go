@@ -202,6 +202,10 @@ type (
 	}
 )
 
+func (p *KVPairOrError) IsNil() bool {
+	return len(p.Key) == 0 && len(p.Value) == 0
+}
+
 // KVStreamIteratorToChan makes channel out of KVStreamIterator
 func KVStreamIteratorToChan(iter KVStreamIterator, ctx context.Context) chan KVPairOrError {
 	ret := make(chan KVPairOrError)
