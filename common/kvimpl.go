@@ -196,9 +196,9 @@ type (
 	}
 
 	KVPairOrError struct {
-		error
 		Key   []byte
 		Value []byte
+		Err   error
 	}
 )
 
@@ -224,7 +224,7 @@ func KVStreamIteratorToChan(iter KVStreamIterator, ctx context.Context) chan KVP
 		})
 		if err != nil {
 			ret <- KVPairOrError{
-				error: err,
+				Err: err,
 			}
 		}
 		close(ret)
