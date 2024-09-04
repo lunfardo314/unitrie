@@ -88,7 +88,7 @@ func (tr *TrieReader) ClearCache() {
 // The buffered nodes are garbage collected, except the mutated ones
 // The object is invalidated, to access the trie new object must be created (or use TrieChained)
 func (tr *TrieUpdatable) Commit(store common.KVWriter) common.VCommitment {
-	common.Assert(!common.IsNil(tr.persistentRoot), "Commit:: updatable trie has been invalidated")
+	common.Assert(!common.IsNil(tr.persistentRoot), "Commit:: updatable trie is invalidated")
 
 	triePartition := common.MakeWriterPartition(store, PartitionTrieNodes)
 	valuePartition := common.MakeWriterPartition(store, PartitionValues)
