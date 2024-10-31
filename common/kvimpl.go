@@ -308,16 +308,27 @@ type BinaryStreamFileWriter struct {
 	file *os.File
 }
 
+func BinaryStreamWriterFromFile(file *os.File) *BinaryStreamFileWriter {
+	return &BinaryStreamFileWriter{
+		BinaryStreamWriter: NewBinaryStreamWriter(file),
+		file:               file,
+	}
+}
+
+func BinaryStreamIteratorFromFile(file *os.File) *BinaryStreamFileIterator {
+	return &BinaryStreamFileIterator{
+		BinaryStreamIterator: NewBinaryStreamIterator(file),
+		file:                 file,
+	}
+}
+
 // CreateKVStreamFile create a new BinaryStreamFileWriter
 func CreateKVStreamFile(fname string) (*BinaryStreamFileWriter, error) {
 	file, err := os.Create(fname)
 	if err != nil {
 		return nil, err
 	}
-	return &BinaryStreamFileWriter{
-		BinaryStreamWriter: NewBinaryStreamWriter(file),
-		file:               file,
-	}, nil
+	return BinaryStreamWriterFromFile(file), nil
 }
 
 func (fw *BinaryStreamFileWriter) Close() error {
@@ -338,10 +349,7 @@ func OpenKVStreamFile(fname string) (*BinaryStreamFileIterator, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &BinaryStreamFileIterator{
-		BinaryStreamIterator: NewBinaryStreamIterator(file),
-		file:                 file,
-	}, nil
+	return BinaryStreamIteratorFromFile(file), nil
 }
 
 func (fs *BinaryStreamFileIterator) Close() error {
