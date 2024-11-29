@@ -60,7 +60,13 @@ func (im *InMemoryKVStore) Get(k []byte) []byte {
 	im.mutex.RLock()
 	defer im.mutex.RUnlock()
 
-	return im.m[string(k)]
+	r := im.m[string(k)]
+	if len(r) == 0 {
+		return nil
+	}
+	ret := make([]byte, len(r))
+	copy(ret, r)
+	return ret
 }
 
 func (im *InMemoryKVStore) Has(k []byte) bool {
@@ -101,8 +107,10 @@ func (im *InMemoryKVStore) Set(k, v []byte) {
 }
 
 func (im *InMemoryKVStore) set(k, v []byte) {
-	if len(v) != 0 {
-		im.m[string(k)] = v
+	if len(v) > 0 {
+		vClone := make([]byte, len(v))
+		copy(vClone, v)
+		im.m[string(k)] = vClone
 	} else {
 		delete(im.m, string(k))
 	}
