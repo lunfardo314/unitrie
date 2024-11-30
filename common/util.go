@@ -90,6 +90,19 @@ func Concat(par ...interface{}) []byte {
 	return buf.Bytes()
 }
 
+// ConcatBytes allocates exact size array
+func ConcatBytes(data ...[]byte) []byte {
+	size := 0
+	for _, d := range data {
+		size += len(d)
+	}
+	ret := make([]byte, 0, size)
+	for _, d := range data {
+		ret = append(ret, d...)
+	}
+	return ret
+}
+
 // writeKV serializes key/value pair into the io.Writer. 2 and 4 little endian bytes for respectively key length and value length
 func writeKV(w io.Writer, k, v []byte) (int, error) {
 	if err := WriteBytes16(w, k); err != nil {
