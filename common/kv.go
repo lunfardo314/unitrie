@@ -70,68 +70,6 @@ func CopyAll(dst KVWriter, src KVIterator) {
 	})
 }
 
-type readerPartition struct {
-	prefix byte
-	r      KVReader
-}
-
-func (p *readerPartition) Get(key []byte) []byte {
-	return p.r.Get(Concat(p.prefix, key))
-}
-
-func (p *readerPartition) Has(key []byte) bool {
-	return p.r.Has(Concat(p.prefix, key))
-}
-
-func MakeReaderPartition(r KVReader, prefix byte) KVReader {
-	return &readerPartition{
-		prefix: prefix,
-		r:      r,
-	}
-}
-
-var _ KVTraversableReader = &traversableReaderPartition{}
-
-type traversableReaderPartition struct {
-	prefix byte
-	r      KVTraversableReader
-}
-
-func (p *traversableReaderPartition) Get(key []byte) []byte {
-	return p.r.Get(Concat(p.prefix, key))
-}
-
-func (p *traversableReaderPartition) Has(key []byte) bool {
-	return p.r.Has(Concat(p.prefix, key))
-}
-
-func (p *traversableReaderPartition) Iterator(iterPrefix []byte) KVIterator {
-	return p.r.Iterator(Concat(p.prefix, iterPrefix))
-}
-
-func MakeTraversableReaderPartition(r KVTraversableReader, p byte) KVTraversableReader {
-	return &traversableReaderPartition{
-		prefix: p,
-		r:      r,
-	}
-}
-
-type writerPartition struct {
-	prefix byte
-	w      KVWriter
-}
-
-func (w *writerPartition) Set(key, value []byte) {
-	w.w.Set(Concat(w.prefix, key), value)
-}
-
-func MakeWriterPartition(w KVWriter, prefix byte) KVWriter {
-	return &writerPartition{
-		prefix: prefix,
-		w:      w,
-	}
-}
-
 func HasWithPrefix(r Traversable, prefix []byte) bool {
 	ret := false
 	r.Iterator(prefix).IterateKeys(func(_ []byte) bool {
