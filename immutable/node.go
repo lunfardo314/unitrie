@@ -89,7 +89,7 @@ func (n *bufferedNode) isRoot() bool {
 
 // indexAsChild return index of the node as a child in the parent commitment and flag if it is a mutatedRoot
 func (n *bufferedNode) indexAsChild() byte {
-	common.Assert(!n.isRoot(), "indexAsChild:: receiver can't be a root node")
+	common.Assertf(!n.isRoot(), "indexAsChild:: receiver can't be a root node")
 	return n.triePath[len(n.triePath)-1]
 
 }
@@ -100,7 +100,7 @@ func (n *bufferedNode) setModifiedChild(child *bufferedNode, idx ...byte) {
 	if child != nil {
 		index = child.indexAsChild()
 	} else {
-		common.Assert(len(idx) > 0, "setModifiedChild: index of the child must be specified if the child is nil")
+		common.Assertf(len(idx) > 0, "setModifiedChild: index of the child must be specified if the child is nil")
 		index = idx[0]
 	}
 	n.uncommittedChildren[index] = child
@@ -109,7 +109,7 @@ func (n *bufferedNode) setModifiedChild(child *bufferedNode, idx ...byte) {
 func (n *bufferedNode) removeChild(child *bufferedNode, idx ...byte) {
 	var index byte
 	if child == nil {
-		common.Assert(len(idx) > 0, "child index must be specified")
+		common.Assertf(len(idx) > 0, "child index must be specified")
 		index = idx[0]
 	} else {
 		index = child.indexAsChild()
@@ -148,12 +148,12 @@ func (n *bufferedNode) getChild(childIndex byte, db *NodeStore) *bufferedNode {
 	if !ok {
 		return nil
 	}
-	common.Assert(!common.IsNil(childCommitment), "TrieUpdatable::getChild: child commitment can be nil")
+	common.Assertf(!common.IsNil(childCommitment), "TrieUpdatable::getChild: child commitment can be nil")
 	childTriePath := common.Concat(n.triePath, n.pathFragment, childIndex)
 
 	nodeFetched, ok := db.FetchNodeData(childCommitment)
-	common.Assert(ok, "TrieUpdatable::getChild: can't fetch node. triePath: '%s', dbKey: '%s",
-		hex.EncodeToString(childCommitment.AsKey()), hex.EncodeToString(childTriePath))
+	common.Assertf(ok, "TrieUpdatable::getChild: can't fetch node. triePath: '%s', dbKey: '%s",
+		func() string { return hex.EncodeToString(childCommitment.AsKey()) }, func() string { return hex.EncodeToString(childTriePath) })
 
 	return newBufferedNode(nodeFetched, childTriePath)
 }

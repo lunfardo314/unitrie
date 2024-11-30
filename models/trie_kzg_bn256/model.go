@@ -197,8 +197,8 @@ func (m *CommitmentModel) UpdateNodeCommitment(mutate *common.NodeData, childUpd
 			delta := m.TrustedSetup.Suite.G1().Scalar().Zero()
 			if childUpd == nil {
 				// deleting child
-				common.Assert(prevC != nil, "prevC != nil")
-				common.Assert(existsPrevC, "par.ChildCommitments[i] != nil")
+				common.Assertf(prevC != nil, "prevC != nil")
+				common.Assertf(existsPrevC, "par.ChildCommitments[i] != nil")
 				delta = scalarFromPoint(m.TrustedSetup.Suite.G1().Scalar(), prevC.(*vectorCommitment).Point)
 				delta.Neg(delta)
 			} else {

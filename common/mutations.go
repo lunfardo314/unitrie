@@ -60,7 +60,7 @@ func (m *Mutations) Set(k, v []byte) {
 
 func (m *Mutations) Apply(mut *Mutations) {
 	mut.Iterate(func(k []byte, v []byte, _ bool) bool {
-		Assert(len(v) > 0, "len(v)>0")
+		Assertf(len(v) > 0, "len(v)>0")
 		m.Set(k, v)
 		return true
 	})
@@ -78,7 +78,7 @@ func (m *Mutations) Iterate(fun func(k []byte, v []byte, wasSet bool) bool) {
 	}
 	for k := range m.del {
 		v, wasSet := m.set[k]
-		Assert(len(v) == 0, "len(v)==0")
+		Assertf(len(v) == 0, "len(v)==0")
 		fun([]byte(k), nil, wasSet)
 	}
 }

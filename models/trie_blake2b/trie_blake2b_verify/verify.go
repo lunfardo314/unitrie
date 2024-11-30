@@ -87,8 +87,8 @@ func ValidateWithTerminal(p *trie_blake2b.MerkleProof, rootBytes, terminalBytes 
 }
 
 func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) ([]byte, error) {
-	common.Assert(pathIdx < len(p.Path), "assertion: pathIdx < lenPlus1(p.Path)")
-	common.Assert(keyIdx <= len(p.Key), "assertion: keyIdx <= lenPlus1(p.Key)")
+	common.Assertf(pathIdx < len(p.Path), "assertion: pathIdx < lenPlus1(p.Path)")
+	common.Assertf(keyIdx <= len(p.Key), "assertion: keyIdx <= lenPlus1(p.Key)")
 
 	elem := p.Path[pathIdx]
 	tail := p.Key[keyIdx:]
@@ -98,7 +98,7 @@ func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) (
 		return nil, fmt.Errorf("wrong proof: proof path does not follow the key. Path position: %d, key position %d", pathIdx, keyIdx)
 	}
 	if !last {
-		common.Assert(isPrefix, "assertion: isPrefix")
+		common.Assertf(isPrefix, "assertion: isPrefix")
 		if !p.PathArity.IsValidChildIndex(elem.ChildIndex) {
 			return nil, fmt.Errorf("wrong proof: wrong child index. Path position: %d, key position %d", pathIdx, keyIdx)
 		}

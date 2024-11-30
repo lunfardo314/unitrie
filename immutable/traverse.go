@@ -31,7 +31,7 @@ func (tr *TrieReader) NodePath(triePath []byte) ([]*PathElement, common.PathEndi
 		endingCode = ending
 		ret = append(ret, elem)
 	})
-	common.Assert(len(ret) > 0, "len(ret)>0")
+	common.Assertf(len(ret) > 0, "len(ret)>0")
 	ret[len(ret)-1].ChildIndex = 0
 	return ret, endingCode
 }
@@ -56,7 +56,7 @@ func (tr *TrieReader) traverseImmutablePath(triePath []byte, fun func(n *common.
 			}
 			return
 		default:
-			common.Assert(len(keyPlusPathFragment) < len(triePath), "len(keyPlusPathFragment) < len(triePath)")
+			common.Assertf(len(keyPlusPathFragment) < len(triePath), "len(keyPlusPathFragment) < len(triePath)")
 			prefix, _, _ := commonPrefix(keyPlusPathFragment, triePath)
 			if !bytes.Equal(prefix, keyPlusPathFragment) {
 				fun(n, trieKey, common.EndingSplit)
@@ -92,7 +92,7 @@ func (tr *TrieUpdatable) traverseMutatedPath(triePath []byte, fun func(n *buffer
 			}
 			return
 		default:
-			common.Assert(len(keyPlusPathFragment) < len(triePath), "len(keyPlusPathFragment) < len(triePath)")
+			common.Assertf(len(keyPlusPathFragment) < len(triePath), "len(keyPlusPathFragment) < len(triePath)")
 			prefix, _, _ := commonPrefix(keyPlusPathFragment, triePath)
 			if !bytes.Equal(prefix, keyPlusPathFragment) {
 				fun(n, common.EndingSplit)

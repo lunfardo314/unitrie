@@ -117,8 +117,8 @@ func decode2(data []byte) ([]byte, error) {
 	}
 	ret := make([]byte, 0, len(data)*8)
 	ret = unpack2(ret, data[1:])
-	Assert(len(ret) >= int(data[0]), "trie::decode2:: assert failed: len(ret) >= int(data[0]), data: %s",
-		hex.EncodeToString(data))
+	Assertf(len(ret) >= int(data[0]), "trie::decode2:: assert failed: len(ret) >= int(data[0]), data: %s",
+		func() string { return hex.EncodeToString(data) })
 	// enforce the last data[0] elements are 0
 	for j := len(ret) - int(data[0]); j < len(ret); j++ {
 		if ret[j] != 0 {
@@ -181,8 +181,8 @@ func PackUnpackedBytes(unpacked []byte, arity PathArity) ([]byte, error) {
 
 func MustEncodeUnpackedBytes(unpacked []byte, arity PathArity) []byte {
 	ret, err := EncodeUnpackedBytes(unpacked, arity)
-	Assert(err == nil, "trie::MustEncodeUnpackedBytes: err: %v, unpacked: %s, arity: %s",
-		err, hex.EncodeToString(unpacked), arity.String())
+	Assertf(err == nil, "trie::MustEncodeUnpackedBytes: err: %v, unpacked: %s, arity: %s",
+		err, func() string { return hex.EncodeToString(unpacked) }, arity.String())
 	return ret
 }
 

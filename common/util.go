@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -85,103 +84,10 @@ func Concat(par ...interface{}) []byte {
 			}
 			buf.WriteByte(byte(p))
 		default:
-			Assert(false, "Concat: unsupported type %T", p)
+			Assertf(false, "Concat: unsupported type %T", p)
 		}
 	}
 	return buf.Bytes()
-}
-
-// ConcatBytes allocates exact size array
-func ConcatBytes(data ...[]byte) []byte {
-	size := 0
-	for _, d := range data {
-		size += len(d)
-	}
-	ret := make([]byte, 0, size)
-	for _, d := range data {
-		ret = append(ret, d...)
-	}
-	return ret
-}
-
-func CloneBytes(data []byte) []byte {
-	ret := make([]byte, len(data))
-	copy(ret, data)
-	return ret
-}
-
-// ByteSize computes byte size of the serialized key/value iterator
-// assumes 2 bytes per key length and 4 bytes per value length
-func ByteSize(s KVIterator) int {
-	accLen := 0
-	s.Iterate(func(k, v []byte) bool {
-		accLen += len(k) + 2 + len(v) + 4
-		return true
-	})
-	return accLen
-}
-
-// NumEntries calculates number of key/value pair in the iterator
-func NumEntries(s KVIterator) int {
-	ret := 0
-	s.Iterate(func(_, _ []byte) bool {
-		ret++
-		return true
-	})
-	return ret
-}
-
-// DumpToFile serializes iterator to the file in binary form.
-// The content of the file in general is non-deterministic due to the random order of iteration
-func DumpToFile(r KVIterator, fname string) (int, error) {
-	file, err := os.Create(fname)
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = file.Close() }()
-
-	var bytesTotal int
-	r.Iterate(func(k, v []byte) bool {
-		n, errw := writeKV(file, k, v)
-		if errw != nil {
-			err = errw
-			return false
-		}
-		bytesTotal += n
-		return true
-	})
-	return bytesTotal, err
-}
-
-func DangerouslyDumpToConsole(title string, r KVIterator) {
-	counter := 0
-	fmt.Printf("%s\n", title)
-	r.Iterate(func(k, v []byte) bool {
-		fmt.Printf("%d: '%x' ::: '%x'\n", counter, k, v)
-		counter++
-		return true
-	})
-}
-
-// UnDumpFromFile restores dumped set of key/value pairs into the key/value writer
-func UnDumpFromFile(w KVWriter, fname string) (int, error) {
-	file, err := os.Open(fname)
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = file.Close() }()
-
-	var k, v []byte
-	var exit bool
-	n := 0
-	for {
-		if k, v, exit = readKV(file); exit {
-			break
-		}
-		n += len(k) + len(v) + 6
-		w.Set(k, v)
-	}
-	return n, nil
 }
 
 // writeKV serializes key/value pair into the io.Writer. 2 and 4 little endian bytes for respectively key length and value length
@@ -423,9 +329,10 @@ func RequirePanicOrErrorWith(t *testing.T, f func() error, fragments ...string) 
 	RequireErrorWith(t, CatchPanicOrError(f), fragments...)
 }
 
-func Assert(cond bool, format string, args ...any) {
+// Assertf with optionally deferred evaluation of arguments
+func Assertf(cond bool, format string, args ...any) {
 	if !cond {
-		panic(fmt.Errorf("assertion failed:: "+format, args...))
+		panic(fmt.Errorf("assertion failed:: "+format, EvalLazyArgs(args...)...))
 	}
 }
 
@@ -434,5 +341,40 @@ func AssertNoError(err error, prefix ...string) {
 	if len(prefix) > 0 {
 		pref = strings.Join(prefix, " ") + ": "
 	}
-	Assert(err == nil, pref+"%w", err)
+	Assertf(err == nil, pref+"%w", err)
+}
+
+func EvalLazyArgs(args ...any) []any {
+	ret := make([]any, len(args))
+	for i, arg := range args {
+		switch funArg := arg.(type) {
+		case func() string:
+			ret[i] = funArg()
+		case func() bool:
+			ret[i] = funArg()
+		case func() int:
+			ret[i] = funArg()
+		case func() byte:
+			ret[i] = funArg()
+		case func() uint:
+			ret[i] = funArg()
+		case func() uint16:
+			ret[i] = funArg()
+		case func() uint32:
+			ret[i] = funArg()
+		case func() uint64:
+			ret[i] = funArg()
+		case func() int16:
+			ret[i] = funArg()
+		case func() int32:
+			ret[i] = funArg()
+		case func() int64:
+			ret[i] = funArg()
+		case func() any:
+			ret[i] = funArg()
+		default:
+			ret[i] = arg
+		}
+	}
+	return ret
 }

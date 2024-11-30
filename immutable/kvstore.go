@@ -10,8 +10,8 @@ import (
 
 // Update updates TrieUpdatable with the unpackedKey/value. Reorganizes and re-calculates trie, keeps cache consistent
 func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
-	common.Assert(!common.IsNil(tr.persistentRoot), "Update:: updatable trie is invalidated")
-	common.Assert(len(key) > 0, "identity of the state can't be changed")
+	common.Assertf(!common.IsNil(tr.persistentRoot), "Update:: updatable trie is invalidated")
+	common.Assertf(len(key) > 0, "identity of the state can't be changed")
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
 	if len(value) == 0 {
 		return tr.delete(unpackedTriePath)
@@ -22,15 +22,15 @@ func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
 // Delete deletes Key/value from the TrieUpdatable
 // Returns true if key existed, false otherwise
 func (tr *TrieUpdatable) Delete(key []byte) bool {
-	common.Assert(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie is invalidated")
-	common.Assert(len(key) > 0, "can't delete root")
+	common.Assertf(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie is invalidated")
+	common.Assertf(len(key) > 0, "can't delete root")
 	return tr.delete(common.UnpackBytes(key, tr.PathArity()))
 }
 
 // DeletePrefix deletes all kv pairs with the prefix. It is a very fast operation, it modifies only one node
 // and all children (any number) disappears from the next root
 func (tr *TrieUpdatable) DeletePrefix(pathPrefix []byte) bool {
-	common.Assert(!common.IsNil(tr.persistentRoot), "DeletePrefix:: updatable trie is invalidated")
+	common.Assertf(!common.IsNil(tr.persistentRoot), "DeletePrefix:: updatable trie is invalidated")
 	if len(pathPrefix) == 0 {
 		// we do not want to delete root, or do we?
 		return false
@@ -57,13 +57,13 @@ func (tr *TrieReader) Get(key []byte) []byte {
 	}
 	value, valueInCommitment := common.ExtractValue(terminal)
 	if valueInCommitment {
-		common.Assert(len(value) > 0, "value in commitment must be not nil. Unpacked key: '%s'",
-			hex.EncodeToString(unpackedTriePath))
+		common.Assertf(len(value) > 0, "value in commitment must be not nil. Unpacked key: '%s'",
+			func() string { return hex.EncodeToString(unpackedTriePath) })
 		return value
 	}
 	value = tr.nodeStore.valueStore.Get(common.AsKey(terminal))
-	common.Assert(len(value) > 0, "value in the value store must be not nil. Unpacked key: '%s'",
-		hex.EncodeToString(unpackedTriePath))
+	common.Assertf(len(value) > 0, "value in the value store must be not nil. Unpacked key: '%s'",
+		func() string { return hex.EncodeToString(unpackedTriePath) })
 	return value
 }
 
@@ -150,7 +150,7 @@ func (tr *TrieReader) Snapshot(destStore common.KVWriter) {
 		}
 		valueKey := common.AsKey(n.Terminal)
 		value := tr.nodeStore.valueStore.Get(valueKey)
-		common.Assert(len(value) > 0, "can't find value for nodeKey '%s'", hex.EncodeToString(valueKey))
+		common.Assertf(len(value) > 0, "can't find value for nodeKey '%s'", func() string { return hex.EncodeToString(valueKey) })
 		valuePartition.Set(valueKey, value)
 		return true
 	})
@@ -158,7 +158,7 @@ func (tr *TrieReader) Snapshot(destStore common.KVWriter) {
 
 // update updates trie. Returns true if key existed already, otherwise false
 func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
-	common.Assert(len(value) > 0, "len(value)>0")
+	common.Assertf(len(value) > 0, "len(value)>0")
 
 	nodes := make([]*bufferedNode, 0)
 	var ends common.PathEndingCode
@@ -166,7 +166,7 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 		nodes = append(nodes, n)
 		ends = ending
 	})
-	common.Assert(len(nodes) > 0, "len(nodes) > 0")
+	common.Assertf(len(nodes) > 0, "len(nodes) > 0")
 	for i := len(nodes) - 2; i >= 0; i-- {
 		nodes[i].setModifiedChild(nodes[i+1])
 	}
@@ -181,10 +181,10 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 	case common.EndingExtend:
 		// extend the current node with the new terminal node
 		keyPlusPathFragment := common.Concat(lastNode.triePath, lastNode.pathFragment)
-		common.Assert(len(keyPlusPathFragment) < len(triePath), "len(keyPlusPathFragment) < len(triePath)")
+		common.Assertf(len(keyPlusPathFragment) < len(triePath), "len(keyPlusPathFragment) < len(triePath)")
 		childTriePath := triePath[:len(keyPlusPathFragment)+1]
 		childIndex := childTriePath[len(childTriePath)-1]
-		common.Assert(lastNode.getChild(childIndex, tr.nodeStore) == nil, "lastNode.getChild(childIndex, tr.nodeStore)==nil")
+		common.Assertf(lastNode.getChild(childIndex, tr.nodeStore) == nil, "lastNode.getChild(childIndex, tr.nodeStore)==nil")
 		child := tr.newTerminalNode(childTriePath, triePath[len(keyPlusPathFragment)+1:], value)
 		lastNode.setModifiedChild(child)
 
@@ -195,7 +195,7 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 			prevNode = nodes[len(nodes)-2]
 		}
 		trieKey := lastNode.triePath
-		common.Assert(len(trieKey) <= len(triePath), "len(trieKey) <= len(triePath)")
+		common.Assertf(len(trieKey) <= len(triePath), "len(trieKey) <= len(triePath)")
 		remainingTriePath := triePath[len(trieKey):]
 
 		prefix, pathFragmentTail, triePathTail := commonPrefix(lastNode.pathFragment, remainingTriePath)
@@ -225,7 +225,7 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 		}
 
 	default:
-		common.Assert(false, "inconsistency: wrong value")
+		common.Assertf(false, "inconsistency: wrong value")
 	}
 	return keyExisted
 }
@@ -237,7 +237,7 @@ func (tr *TrieUpdatable) delete(triePath []byte) bool {
 		nodes = append(nodes, n)
 		ends = ending
 	})
-	common.Assert(len(nodes) > 0, "len(nodes) > 0")
+	common.Assertf(len(nodes) > 0, "len(nodes) > 0")
 	if ends != common.EndingTerminal {
 		// the key is not present in the trie, do nothing
 		return false
@@ -255,7 +255,7 @@ func (tr *TrieUpdatable) delete(triePath []byte) bool {
 			nodes[i-1].removeChild(nil, idxAsChild)
 		}
 	}
-	common.Assert(nodes[0] != nil, "please do not delete root")
+	common.Assertf(nodes[0] != nil, "please do not delete root")
 	return true
 }
 
@@ -286,7 +286,7 @@ func (tr *TrieReader) iteratePrefix(f func(k []byte, v []byte) bool, prefix []by
 		root = n.Commitment
 		triePath = trieKey
 	})
-	common.Assert(!common.IsNil(root), "!common.IsNil(root)")
+	common.Assertf(!common.IsNil(root), "!common.IsNil(root)")
 	tr.iterate(root, triePath, func(k []byte, v []byte) bool {
 		if bytes.HasPrefix(k, prefix) {
 			return f(k, v)
@@ -306,7 +306,8 @@ func (tr *TrieReader) iterate(root common.VCommitment, triePath []byte, fun func
 				value, inTheCommitment = n.Terminal.ExtractValue()
 				if !inTheCommitment {
 					value = tr.nodeStore.valueStore.Get(common.AsKey(n.Terminal))
-					common.Assert(len(value) > 0, "can't fetch value. triePath: '%s', data commitment: %s", hex.EncodeToString(key), n.Terminal)
+					common.Assertf(len(value) > 0, "can't fetch value. triePath: '%s', data commitment: %s",
+						func() string { return hex.EncodeToString(key) }, n.Terminal)
 				}
 			}
 			if !fun(key, value) {
@@ -320,7 +321,7 @@ func (tr *TrieReader) iterate(root common.VCommitment, triePath []byte, fun func
 // iterateNodes iterates nodes of the trie in the lexicographical order of trie keys in "depth first" order
 func (tr *TrieReader) iterateNodes(root common.VCommitment, rootKey []byte, fun func(nodeKey []byte, n *common.NodeData) bool) bool {
 	n, found := tr.nodeStore.FetchNodeData(root)
-	common.Assert(found, "can't fetch node. triePath: '%s', node commitment: %s", hex.EncodeToString(rootKey), root)
+	common.Assertf(found, "can't fetch node. triePath: '%s', node commitment: %s", func() string { return hex.EncodeToString(rootKey) }, root)
 
 	if !fun(rootKey, n) {
 		return false
@@ -346,7 +347,7 @@ func (tr *TrieUpdatable) deletePrefix(pathPrefix []byte) bool {
 	if !prefixExists {
 		return false
 	}
-	common.Assert(len(nodes) > 1, "len(nodes) > 0")
+	common.Assertf(len(nodes) > 1, "len(nodes) > 0")
 	// remove the last node and propagate
 
 	// remove terminal and the children from the current node
@@ -429,7 +430,7 @@ func (tr *TrieUpdatable) DeleteStr(key interface{}) {
 // AddWithPrefix is mass adding keys with the same prefix
 // TODO optimization of mass prefix update. Needed for UTXO ledger state updates
 func (tr *TrieUpdatable) AddWithPrefix(prefix []byte, suffixValues map[string][]byte) error {
-	common.Assert(!common.IsNil(tr.persistentRoot), "AddWithPrefix:: updatable trie is invalidated")
+	common.Assertf(!common.IsNil(tr.persistentRoot), "AddWithPrefix:: updatable trie is invalidated")
 	if len(suffixValues) == 0 {
 		tr.DeletePrefix(prefix)
 		return nil

@@ -25,7 +25,7 @@ const (
 
 // MustInitRoot initializes new empty root with the given identity
 func MustInitRoot(store common.KVWriter, m common.CommitmentModel, identity []byte) common.VCommitment {
-	common.Assert(len(identity) > 0, "MustInitRoot: identity of the root cannot be empty")
+	common.Assertf(len(identity) > 0, "MustInitRoot: identity of the root cannot be empty")
 	// create a node with the commitment to the identity as terminal for the root
 	// stores identity in the value store if it does not fit the commitment
 	// assigns state index 0
@@ -74,15 +74,15 @@ func (ns *NodeStore) FetchNodeData(nodeCommitment common.VCommitment) (*common.N
 		panic("internal inconsistency: all terminal commitments must be stored in the trie node")
 	}
 	ret, err := common.NodeDataFromBytes(ns.m, nodeBin, ns.m.PathArity(), noValueStore)
-	common.Assert(err == nil, "NodeStore::FetchNodeData err: '%v' nodeBin: '%s', commitment: %s, arity: %s",
-		err, hex.EncodeToString(nodeBin), nodeCommitment, ns.m.PathArity())
+	common.Assertf(err == nil, "NodeStore::FetchNodeData err: '%v' nodeBin: '%s', commitment: %s, arity: %s",
+		err, func() string { return hex.EncodeToString(nodeBin) }, nodeCommitment, ns.m.PathArity())
 	ret.Commitment = nodeCommitment
 	return ret, true
 }
 
 func (ns *NodeStore) MustFetchNodeData(nodeCommitment common.VCommitment) *common.NodeData {
 	ret, ok := ns.FetchNodeData(nodeCommitment)
-	common.Assert(ok, "NodeStore::MustFetchNodeData: cannot find node data: commitment: '%s'", nodeCommitment.String())
+	common.Assertf(ok, "NodeStore::MustFetchNodeData: cannot find node data: commitment: '%s'", func() string { return nodeCommitment.String() })
 	return ret
 }
 
@@ -91,12 +91,12 @@ func (ns *NodeStore) FetchChild(n *common.NodeData, childIdx byte, trieKey []byt
 	if !childFound {
 		return nil, nil
 	}
-	common.Assert(!common.IsNil(c), "immutable::FetchChild: unexpected nil commitment")
+	common.Assertf(!common.IsNil(c), "immutable::FetchChild: unexpected nil commitment")
 	childTriePath := common.Concat(trieKey, n.PathFragment, childIdx)
 
 	ret, ok := ns.FetchNodeData(c)
-	common.Assert(ok, "immutable::FetchChild: failed to fetch node. trieKey: '%s', childIndex: %d",
-		hex.EncodeToString(trieKey), childIdx)
+	common.Assertf(ok, "immutable::FetchChild: failed to fetch node. trieKey: '%s', childIndex: %d",
+		func() string { return hex.EncodeToString(trieKey) }, childIdx)
 	return ret, childTriePath
 }
 

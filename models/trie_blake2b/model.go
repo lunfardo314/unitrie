@@ -76,7 +76,7 @@ func New(arity common.PathArity, hashSize HashSize, valueSizeOptimizationThresho
 		terminalCommitmentSizeMax:      terminalCommitmentSizeMaxDefault,
 		valueSizeOptimizationThreshold: t,
 	}
-	common.Assert(ret.terminalCommitmentSizeMax <= 0x3F, "ret.terminalCommitmentSizeMax <= 0x3F")
+	common.Assertf(ret.terminalCommitmentSizeMax <= 0x3F, "ret.terminalCommitmentSizeMax <= 0x3F")
 	return ret
 }
 
@@ -204,7 +204,7 @@ func (m *CommitmentModel) commitToData(data []byte) *terminalCommitment {
 		commitmentBytes = common.Concat(data)
 		isValueInCommitment = true
 	}
-	common.Assert(len(commitmentBytes) <= m.terminalCommitmentSizeMax-1,
+	common.Assertf(len(commitmentBytes) <= m.terminalCommitmentSizeMax-1,
 		"len(commitmentBytes) <= m.terminalCommitmentSizeMax-1")
 	return &terminalCommitment{
 		bytes:               commitmentBytes,
@@ -231,7 +231,7 @@ func blakeIt(data []byte, sz HashSize) []byte {
 func (m *CommitmentModel) makeHashVector(nodeData *common.NodeData, nodePath []byte) [][]byte {
 	hashes := make([][]byte, m.arity.VectorLength())
 	for i, c := range nodeData.ChildCommitments {
-		common.Assert(int(i) < m.arity.VectorLength(), "int(i)<m.arity.VectorLength()")
+		common.Assertf(int(i) < m.arity.VectorLength(), "int(i)<m.arity.VectorLength()")
 		hashes[i] = c.Bytes()
 	}
 	if !common.IsNil(nodeData.Terminal) {
@@ -248,7 +248,7 @@ func (m *CommitmentModel) makeHashVector(nodeData *common.NodeData, nodePath []b
 func HashTheVector(hashes [][]byte, arity common.PathArity, sz HashSize) []byte {
 	buf := make([]byte, arity.VectorLength()*int(sz))
 	for i, h := range hashes {
-		common.Assert(len(h) <= int(sz), "len(h)<=int(sz)")
+		common.Assertf(len(h) <= int(sz), "len(h)<=int(sz)")
 		if len(h) == 0 {
 			continue
 		}
@@ -324,7 +324,7 @@ const (
 
 func (t *terminalCommitment) Write(w io.Writer) error {
 	l := byte(len(t.bytes))
-	common.Assert(l <= l&sizeMask, "l <= l & sizeMask")
+	common.Assertf(l <= l&sizeMask, "l <= l & sizeMask")
 	if t.isCostlyCommitment {
 		l |= costlyCommitmentMask
 	}

@@ -35,7 +35,7 @@ func (m *CommitmentModel) ProofImmutable(key []byte, tr *immutable.TrieReader) *
 		}
 		ret.Path[i] = elem
 	}
-	common.Assert(len(ret.Path) > 0, "len(ret.Path)")
+	common.Assertf(len(ret.Path) > 0, "len(ret.Path)")
 	last := ret.Path[len(ret.Path)-1]
 	switch ending {
 	case common.EndingTerminal:
