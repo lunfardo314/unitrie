@@ -90,8 +90,8 @@ func Concat(par ...interface{}) []byte {
 	return buf.Bytes()
 }
 
-// ConcatBytes allocates exact size array
-func ConcatBytes(data ...[]byte) []byte {
+// concatBytes allocates exact size array
+func concatBytes(data ...[]byte) []byte {
 	size := 0
 	for _, d := range data {
 		size += len(d)
@@ -105,7 +105,7 @@ func ConcatBytes(data ...[]byte) []byte {
 
 // UseConcatBytes optimized for temporary buf
 func UseConcatBytes(fun func(cat []byte), data ...[]byte) {
-	cat := ConcatBytes(data...)
+	cat := concatBytes(data...)
 	fun(cat)
 	DisposeSmallBuf(cat)
 }
