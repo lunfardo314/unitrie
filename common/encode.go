@@ -134,9 +134,9 @@ func UnpackBytes(src []byte, arity PathArity) []byte {
 	case PathArity256:
 		return src
 	case PathArity16:
-		return unpack16(make([]byte, 0, 2*len(src)), src)
+		return unpack16(AllocSmallBuf(2*len(src)), src)
 	case PathArity2:
-		return unpack2(make([]byte, 0, 8*len(src)), src)
+		return unpack2(AllocSmallBuf(8*len(src)), src)
 	}
 	panic(ErrWrongArity)
 }

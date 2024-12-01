@@ -42,6 +42,8 @@ func (tr *TrieUpdatable) DeletePrefix(pathPrefix []byte) bool {
 // Get reads the trie with the key
 func (tr *TrieReader) Get(key []byte) []byte {
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
+	defer common.DisposeSmallBuf(unpackedTriePath)
+
 	found := false
 	var terminal common.TCommitment
 	tr.traverseImmutablePath(unpackedTriePath, func(n *common.NodeData, _ []byte, ending common.PathEndingCode) {
@@ -70,6 +72,8 @@ func (tr *TrieReader) Get(key []byte) []byte {
 // Has check existence of the key in the trie
 func (tr *TrieReader) Has(key []byte) bool {
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
+	defer common.DisposeSmallBuf(unpackedTriePath)
+
 	found := false
 	tr.traverseImmutablePath(unpackedTriePath, func(n *common.NodeData, _ []byte, ending common.PathEndingCode) {
 		if ending == common.EndingTerminal {
