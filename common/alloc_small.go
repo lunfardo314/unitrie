@@ -26,8 +26,8 @@ func DisposeSmallBuf(b []byte) {
 	if len(b) < keepInPoolMinSize || len(b) > keepInPoolMaxSize {
 		return
 	}
-	for i := range b {
-		b[i] = 0
-	}
+	//for i := range b {
+	//	b[i] = 0
+	//}
 	keyPool[len(b)].Put(b)
 }
