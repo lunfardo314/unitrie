@@ -9,6 +9,7 @@ import (
 	"math"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -90,17 +91,51 @@ func Concat(par ...interface{}) []byte {
 	return buf.Bytes()
 }
 
+const (
+	keepInPoolMinSize = 8
+	keepInPoolMaxSize = 128
+)
+
+var keyPool [keepInPoolMaxSize + 1]sync.Pool
+
+func _allocBuf(size int) (ret []byte) {
+	if size < keepInPoolMinSize || size > keepInPoolMaxSize {
+		ret = make([]byte, 0, size)
+	} else {
+		if r := keyPool[size].Get(); r != nil {
+			ret = r.([]byte)[:0]
+		} else {
+			ret = make([]byte, 0, size)
+		}
+	}
+	return
+}
+
+func _disposeBuf(b []byte) {
+	if len(b) < keepInPoolMinSize || len(b) > keepInPoolMaxSize {
+		return
+	}
+	keyPool[len(b)].Put(b)
+}
+
 // ConcatBytes allocates exact size array
 func ConcatBytes(data ...[]byte) []byte {
 	size := 0
 	for _, d := range data {
 		size += len(d)
 	}
-	ret := make([]byte, 0, size)
+	ret := _allocBuf(size)
 	for _, d := range data {
 		ret = append(ret, d...)
 	}
 	return ret
+}
+
+// UseConcatBytes optimized for temporary buf
+func UseConcatBytes(fun func(cat []byte), data ...[]byte) {
+	cat := ConcatBytes(data...)
+	fun(cat)
+	_disposeBuf(cat)
 }
 
 // writeKV serializes key/value pair into the io.Writer. 2 and 4 little endian bytes for respectively key length and value length

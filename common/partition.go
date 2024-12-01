@@ -54,12 +54,18 @@ var (
 	traversableReaderPartitionPool sync.Pool
 )
 
-func (p *TraversableReaderPartition) Get(key []byte) []byte {
-	return p.r.Get(Concat(p.prefix, key))
+func (p *TraversableReaderPartition) Get(key []byte) (ret []byte) {
+	UseConcatBytes(func(cat []byte) {
+		ret = p.r.Get(cat)
+	}, []byte{p.prefix}, key)
+	return
 }
 
-func (p *TraversableReaderPartition) Has(key []byte) bool {
-	return p.r.Has(Concat(p.prefix, key))
+func (p *TraversableReaderPartition) Has(key []byte) (ret bool) {
+	UseConcatBytes(func(cat []byte) {
+		ret = p.r.Has(cat)
+	}, []byte{p.prefix}, key)
+	return
 }
 
 func (p *TraversableReaderPartition) Iterator(iterPrefix []byte) KVIterator {
