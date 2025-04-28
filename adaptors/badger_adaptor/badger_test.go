@@ -2,7 +2,6 @@ package badger_adaptor
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/lunfardo314/unitrie/common"
@@ -24,14 +23,20 @@ func TestBasic(t *testing.T) {
 
 	count := 0
 	a.Iterator(nil).Iterate(func(k, v []byte) bool {
-		fmt.Printf("%d : '%s' - '%s'\n", count, string(k), string(v))
+		t.Logf("%d : '%s' - '%s'", count, string(k), string(v))
 		count++
 		return true
 	})
-	fmt.Printf("------ with prefix 'a'\n")
-
+	t.Logf("------ with prefix 'a' and values\n")
 	a.Iterator([]byte("a")).Iterate(func(k, v []byte) bool {
-		fmt.Printf("%d : '%s' - '%s'\n", count, string(k), string(v))
+		t.Logf("%d : '%s' - '%s'", count, string(k), string(v))
+		count++
+		return true
+	})
+
+	t.Logf("------ with prefix 'a', only keys\n")
+	a.Iterator([]byte("a")).IterateKeys(func(k []byte) bool {
+		t.Logf("%d : '%s'", count, string(k))
 		count++
 		return true
 	})

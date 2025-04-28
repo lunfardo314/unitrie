@@ -163,7 +163,7 @@ func (it *badgerAdaptorIterator) IterateKeys(fun func(k []byte) bool) {
 			dbIt := txn.NewIterator(opts)
 			defer dbIt.Close()
 
-			for dbIt.Rewind(); dbIt.ValidForPrefix(it.prefix); dbIt.Next() {
+			for dbIt.Seek(it.prefix); dbIt.ValidForPrefix(it.prefix); dbIt.Next() {
 				if !fun(dbIt.Item().Key()) {
 					return nil
 				}
