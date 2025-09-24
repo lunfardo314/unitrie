@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -23,9 +24,22 @@ func TestKeyExistence(t *testing.T) {
 	require.NoError(t, err)
 	existed := tr.Update([]byte("a"), []byte("a"))
 	require.False(t, existed)
+	existed = tr.Update([]byte("b1"), []byte("b1"))
+	require.False(t, existed)
+	existed = tr.Update([]byte("b2"), []byte("b2"))
+	require.False(t, existed)
+	existed = tr.Update([]byte("b3"), []byte("b3"))
+	require.False(t, existed)
+	existed = tr.Update([]byte("b4"), []byte("b4"))
+	require.False(t, existed)
 	existed = tr.Update([]byte("b"), []byte("b"))
 	require.False(t, existed)
 	tr = tr.CommitChained()
+
+	back1 := tr.Get([]byte("b"))
+	require.Equal(t, []byte("b"), back1)
+	back2 := tr.Get([]byte("b1"))
+	require.Equal(t, []byte("b1"), back2)
 
 	existed = tr.Update([]byte("b"), []byte("bbb"))
 	require.True(t, existed)
@@ -36,6 +50,25 @@ func TestKeyExistence(t *testing.T) {
 	existed = tr.Delete([]byte("b"))
 	require.True(t, existed)
 
+}
+
+func TestKeyExistence2(t *testing.T) {
+	store := common.NewInMemoryKVStore()
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+
+	root := immutable.MustInitRoot(store, m, []byte("identity"))
+	tr, err := immutable.NewTrieChained(m, store, root)
+	require.NoError(t, err)
+
+	for i := 0; i < 256; i++ {
+		key := append(bytes.Repeat([]byte{0x01}, 256), byte(i))
+		existed := tr.Update(key, key)
+		require.False(t, existed)
+	}
+	key := bytes.Repeat([]byte{0x01}, 256)
+	existed := tr.Update(key, []byte{0xff})
+	require.False(t, existed)
+	tr = tr.CommitChained()
 }
 
 func TestDeletedKey(t *testing.T) {

@@ -179,8 +179,8 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 	switch ends {
 	case common.EndingTerminal:
 		// reached the end just for the terminal
+		keyExisted = lastNode.terminal != nil
 		lastNode.setValue(value, tr.Model())
-		keyExisted = true
 
 	case common.EndingExtend:
 		// extend the current node with the new terminal node
@@ -207,6 +207,8 @@ func (tr *TrieUpdatable) update(triePath []byte, value []byte) bool {
 		childIndexContinue := pathFragmentTail[0]
 		pathFragmentContinue := pathFragmentTail[1:]
 		trieKeyToContinue := common.Concat(trieKey, prefix, childIndexContinue)
+
+		common.Assertf(prevNode != nil, "prevNode!=nil")
 
 		prevNode.removeChild(lastNode)
 		lastNode.setPathFragment(pathFragmentContinue)
