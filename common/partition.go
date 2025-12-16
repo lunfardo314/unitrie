@@ -5,7 +5,7 @@ import "sync"
 // ---------------reader partition
 
 type ReaderPartition struct {
-	r      KVReader
+	KVReader
 	prefix byte
 }
 
@@ -16,14 +16,14 @@ var (
 
 func (p *ReaderPartition) Get(key []byte) (ret []byte) {
 	UseConcatBytes(func(cat []byte) {
-		ret = p.r.Get(cat)
+		ret = p.KVReader.Get(cat)
 	}, []byte{p.prefix}, key)
 	return
 }
 
 func (p *ReaderPartition) Has(key []byte) (ret bool) {
 	UseConcatBytes(func(cat []byte) {
-		ret = p.r.Has(cat)
+		ret = p.KVReader.Has(cat)
 	}, []byte{p.prefix}, key)
 	return
 }
@@ -37,21 +37,21 @@ func MakeReaderPartition(r KVReader, prefix byte) *ReaderPartition {
 		ret = s.(*ReaderPartition)
 	}
 	*ret = ReaderPartition{
-		prefix: prefix,
-		r:      r,
+		prefix:   prefix,
+		KVReader: r,
 	}
 	return ret
 }
 
 func (p *ReaderPartition) Dispose() {
-	p.r = nil
+	p.KVReader = nil
 	readerPartitionPool.Put(p)
 }
 
 // ---------------- traversable reader partition
 
 type TraversableReaderPartition struct {
-	r      KVTraversableReader
+	KVTraversableReader
 	prefix byte
 }
 
@@ -62,20 +62,20 @@ var (
 
 func (p *TraversableReaderPartition) Get(key []byte) (ret []byte) {
 	UseConcatBytes(func(cat []byte) {
-		ret = p.r.Get(cat)
+		ret = p.KVTraversableReader.Get(cat)
 	}, []byte{p.prefix}, key)
 	return
 }
 
 func (p *TraversableReaderPartition) Has(key []byte) (ret bool) {
 	UseConcatBytes(func(cat []byte) {
-		ret = p.r.Has(cat)
+		ret = p.KVTraversableReader.Has(cat)
 	}, []byte{p.prefix}, key)
 	return
 }
 
 func (p *TraversableReaderPartition) Iterator(iterPrefix []byte) KVIterator {
-	return p.r.Iterator(Concat(p.prefix, iterPrefix))
+	return p.KVTraversableReader.Iterator(Concat(p.prefix, iterPrefix))
 }
 
 func MakeTraversableReaderPartition(r KVTraversableReader, p byte) *TraversableReaderPartition {
@@ -87,14 +87,14 @@ func MakeTraversableReaderPartition(r KVTraversableReader, p byte) *TraversableR
 		ret = s.(*TraversableReaderPartition)
 	}
 	*ret = TraversableReaderPartition{
-		prefix: p,
-		r:      r,
+		prefix:              p,
+		KVTraversableReader: r,
 	}
 	return ret
 }
 
 func (p *TraversableReaderPartition) Dispose() {
-	p.r = nil
+	p.KVTraversableReader = nil
 	traversableReaderPartitionPool.Put(p)
 }
 
