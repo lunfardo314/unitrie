@@ -69,7 +69,7 @@ func (tr *TrieReader) Get(key []byte) []byte {
 	return value
 }
 
-// Has check existence of the key in the trie
+// Has checks existence of the key in the trie
 func (tr *TrieReader) Has(key []byte) bool {
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
 	//defer common.DisposeSmallBuf(unpackedTriePath)
@@ -83,12 +83,6 @@ func (tr *TrieReader) Has(key []byte) bool {
 		}
 	})
 	return found
-}
-
-// HasWithPrefix check existence of at least one key with specified prefix in the trie
-// Deprecated: use function HasWithPrefix
-func (tr *TrieReader) HasWithPrefix(prefix []byte) bool {
-	return common.HasWithPrefix(tr, prefix)
 }
 
 // Iterate iterates all the key/value pairs in the trie

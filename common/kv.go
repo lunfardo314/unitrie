@@ -70,6 +70,7 @@ func CopyAll(dst KVWriter, src KVIterator) {
 	})
 }
 
+// HasWithPrefix returns true if there's at least one key with the given prefix
 func HasWithPrefix(r Traversable, prefix []byte) bool {
 	ret := false
 	r.Iterator(prefix).IterateKeys(func(_ []byte) bool {
