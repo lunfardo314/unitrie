@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 )
@@ -33,8 +34,11 @@ func (m *Mutations) Set(k, v []byte) {
 	if m.mustNoDoubleBooking != nil {
 		if len(v) > 0 {
 			// set
-			if _, already := m.set[ks]; already {
-				m.mustNoDoubleBooking(fmt.Errorf("repetitive SET mutation. The key '%s' was already set", ks))
+			if existing, already := m.set[ks]; already {
+				if bytes.Equal(existing, v) {
+					return // idempotent write: same key, same value
+				}
+				m.mustNoDoubleBooking(fmt.Errorf("conflicting SET mutation. The key '%s' was set with a different value", ks))
 			} else if _, already = m.del[ks]; already {
 				m.mustNoDoubleBooking(fmt.Errorf("repetitive SET mutation. The key '%s' was already deleted", ks))
 			}
