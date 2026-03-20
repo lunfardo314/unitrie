@@ -45,11 +45,14 @@ func openImmutableNodeStore(store common.KVReader, model common.CommitmentModel,
 		m:                model,
 		trieStore:        common.MakeReaderPartition(store, PartitionTrieNodes),
 		valueStore:       common.MakeReaderPartition(store, PartitionValues),
-		cache:            make(map[string]*common.NodeData),
 		clearCacheAtSize: defaultClearCacheEveryGets,
 	}
 	if len(clearCacheAtSize) > 0 {
 		ret.clearCacheAtSize = clearCacheAtSize[0]
+	}
+	// Fix: skip map allocation when caching is disabled (clearCacheAtSize==0)
+	if ret.clearCacheAtSize > 0 {
+		ret.cache = make(map[string]*common.NodeData)
 	}
 	return ret
 }
@@ -62,8 +65,8 @@ func (ns *NodeStore) FetchNodeData(nodeCommitment common.VCommitment) (*common.N
 			return ret, true
 		}
 		if len(ns.cache) > ns.clearCacheAtSize {
-			// GC the whole cache when cache reaches specified size
-			ns.cache = make(map[string]*common.NodeData)
+			// Fix: use clear() to zero entries in-place, avoiding old map pileup before GC
+			clear(ns.cache)
 		}
 	}
 	nodeBin := ns.trieStore.Get(dbKey)
@@ -77,6 +80,10 @@ func (ns *NodeStore) FetchNodeData(nodeCommitment common.VCommitment) (*common.N
 	common.Assertf(err == nil, "NodeStore::FetchNodeData err: '%v' nodeBin: '%s', commitment: %s, arity: %s",
 		err, func() string { return hex.EncodeToString(nodeBin) }, nodeCommitment, ns.m.PathArity())
 	ret.Commitment = nodeCommitment
+	// Fix: actually populate the cache with fetched nodes (was missing, making cache always empty)
+	if ns.clearCacheAtSize > 0 {
+		ns.cache[string(dbKey)] = ret
+	}
 	return ret, true
 }
 
@@ -101,5 +108,6 @@ func (ns *NodeStore) FetchChild(n *common.NodeData, childIdx byte, trieKey []byt
 }
 
 func (ns *NodeStore) clearCache() {
-	ns.cache = make(map[string]*common.NodeData)
+	// Fix: use clear() to zero entries in-place, avoiding old map pileup before GC
+	clear(ns.cache)
 }
