@@ -104,7 +104,7 @@ func (tr *TrieUpdatable) Commit(store common.KVWriter) common.VCommitment {
 
 func (trc *TrieChained) CommitChained() *TrieChained {
 	newRoot := trc.Commit(trc.store)
-	ret, err := NewTrieChained(trc.Model(), trc.store, newRoot, trc.nodeStore.clearCacheAtSize)
+	ret, err := NewTrieChained(trc.Model(), trc.store, newRoot, trc.nodeStore.cacheCapacity)
 	common.Assertf(err == nil, "TrieChained.Commit:: can create new chained trie object: %v", err)
 	return ret
 }
