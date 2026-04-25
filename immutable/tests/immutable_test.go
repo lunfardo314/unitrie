@@ -716,6 +716,97 @@ func TestIteratePrefix(t *testing.T) {
 	}
 }
 
+// countingKVReader wraps a KVReader and counts Get / Has calls. Used to
+// verify that iteratePrefix does NOT walk a sub-tree when the prefix is
+// absent from the trie.
+type countingKVReader struct {
+	inner    common.KVReader
+	gets     int
+	hases    int
+}
+
+func (c *countingKVReader) Get(key []byte) []byte {
+	c.gets++
+	return c.inner.Get(key)
+}
+
+func (c *countingKVReader) Has(key []byte) bool {
+	c.hases++
+	return c.inner.Has(key)
+}
+
+// TestIteratePrefixSkipsAbsent verifies that iterating an absent prefix performs
+// zero sub-tree fetches — only the prefix walk down to the divergence/extension
+// point. Previously, iteratePrefix would set `root` to the parent / divergent
+// node and then iterate the parent's whole sub-tree, throwing away every emitted
+// key via the bytes.HasPrefix filter. With the short-circuit fix in iteratePrefix,
+// EndingExtend / non-matching EndingSplit paths don't invoke the iterate sub-tree
+// walk at all.
+func TestIteratePrefixSkipsAbsent(t *testing.T) {
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize160)
+	store := common.NewInMemoryKVStore()
+	rootInitial := immutable.MustInitRoot(store, m, []byte("identity"))
+	require.NotNil(t, rootInitial)
+
+	tr, err := immutable.NewTrieChained(m, store, rootInitial)
+	require.NoError(t, err)
+
+	// Populate a sub-tree under the prefix "aaa" (50 entries) plus a few unrelated
+	// keys. An absent prefix like "zzz" must NOT touch the "aaa" sub-tree.
+	for i := 0; i < 50; i++ {
+		k := fmt.Sprintf("aaa%03d", i)
+		tr.Update([]byte(k), []byte(k))
+	}
+	for _, k := range []string{"bbb", "ccc", "ddd", "eee"} {
+		tr.Update([]byte(k), []byte(k))
+	}
+	tr = tr.CommitChained()
+	root := tr.Root()
+
+	// Wrap the store in a counter for the read paths used by TrieReader.
+	cnt := &countingKVReader{inner: store}
+	trr, err := immutable.NewTrieReader(m, cnt, root, 0)
+	require.NoError(t, err)
+
+	// Baseline: capture Get count after constructing the reader.
+	baselineGets := cnt.gets
+
+	// Absent prefix — the trie has nothing starting with "zzz".
+	cnt.gets = 0
+	trr.Iterator([]byte("zzz")).Iterate(func(k, v []byte) bool {
+		t.Fatalf("absent prefix should yield no keys, got %q", k)
+		return true
+	})
+	absentGets := cnt.gets
+
+	// Present prefix — must yield all 50 entries.
+	cnt.gets = 0
+	emitted := 0
+	trr.Iterator([]byte("aaa")).Iterate(func(k, v []byte) bool {
+		emitted++
+		require.True(t, strings.HasPrefix(string(k), "aaa"))
+		return true
+	})
+	presentGets := cnt.gets
+	require.Equal(t, 50, emitted, "present prefix should emit exactly 50 keys")
+
+	t.Logf("Get counts: baseline=%d, absent prefix=%d, present prefix=%d", baselineGets, absentGets, presentGets)
+
+	// The fix's invariant: an absent prefix performs only the prefix-walk Gets,
+	// no sub-tree iteration. With path arity 16 and a short prefix (3 bytes = 6
+	// nibbles), the walk descends at most a handful of nodes before diverging.
+	// The present-prefix iteration must fetch the whole sub-tree (50 leaves +
+	// internal nodes), which is many more Gets.
+	//
+	// Concrete bound: absent should be far smaller than present. Use a generous
+	// margin so the test is robust to compaction/path-fragment differences across
+	// arities, but tight enough to catch a regression that would re-introduce
+	// the full sub-tree walk on absent prefixes.
+	require.Less(t, absentGets, presentGets/4,
+		"absent-prefix iteration should perform far fewer Gets than present-prefix iteration; got absent=%d, present=%d",
+		absentGets, presentGets)
+}
+
 func TestDeletePrefix(t *testing.T) {
 	iterTest := func(m common.CommitmentModel, scenario []string, prefix string) func(t *testing.T) {
 		return func(t *testing.T) {

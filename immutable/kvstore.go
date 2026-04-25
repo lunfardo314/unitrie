@@ -276,17 +276,51 @@ func (tr *TrieUpdatable) mergeNodeIfNeeded(node *bufferedNode) *bufferedNode {
 }
 
 // iteratePrefix iterates the key/value with keys with prefix.
-// The order of the iteration will be deterministic
+// The order of the iteration will be deterministic.
+//
+// Walks down the prefix path via traverseImmutablePath; if the prefix exists in
+// the trie, the deepest visited node's sub-tree contains exactly the matching
+// keys and is iterated. If the prefix is not in the trie (EndingExtend, or an
+// EndingSplit where the partial path-fragment doesn't match the partial prefix),
+// no iteration is needed — emitting via the bytes.HasPrefix filter would just
+// throw away every key after fetching the whole sub-tree from the store. Detect
+// those cases and short-circuit.
 func (tr *TrieReader) iteratePrefix(f func(k []byte, v []byte) bool, prefix []byte, extractValue bool) {
 	var root common.VCommitment
 	var triePath []byte
+	var node *common.NodeData
+	var ending common.PathEndingCode
 	unpackedPrefix := common.UnpackBytes(prefix, tr.Model().PathArity())
-	// go down the prefix as deep as possible, then start from there
-	tr.traverseImmutablePath(unpackedPrefix, func(n *common.NodeData, trieKey []byte, ending common.PathEndingCode) {
+	tr.traverseImmutablePath(unpackedPrefix, func(n *common.NodeData, trieKey []byte, e common.PathEndingCode) {
 		root = n.Commitment
 		triePath = trieKey
+		node = n
+		ending = e
 	})
 	common.Assertf(!common.IsNil(root), "!common.IsNil(root)")
+
+	switch ending {
+	case common.EndingExtend:
+		// Required child does not exist — no key has this prefix.
+		return
+	case common.EndingSplit:
+		// Two sub-cases (see traverseImmutablePath):
+		//   case 1: len(unpackedPrefix) <  len(triePath)+len(node.PathFragment) — the
+		//           prefix runs out mid-pathFragment. Match iff the partial pathFragment
+		//           equals the remaining prefix.
+		//   case 2: len(unpackedPrefix) >= len(triePath)+len(node.PathFragment) — the
+		//           prefix and pathFragment have equal length but bytes differ, or the
+		//           prefix is longer and didn't match. Either way, no key matches.
+		if len(unpackedPrefix) >= len(triePath)+len(node.PathFragment) {
+			return
+		}
+		partial := node.PathFragment[:len(unpackedPrefix)-len(triePath)]
+		if !bytes.Equal(unpackedPrefix[len(triePath):], partial) {
+			return
+		}
+		// fall through and iterate
+	}
+
 	tr.iterate(root, triePath, func(k []byte, v []byte) bool {
 		if bytes.HasPrefix(k, prefix) {
 			return f(k, v)
