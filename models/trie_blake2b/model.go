@@ -33,12 +33,14 @@ const (
 	HashSize256 = HashSize(32)
 )
 
-var AllHashSize = []HashSize{HashSize160, HashSize256}
+var AllHashSize = []HashSize{HashSize160, HashSize192, HashSize256}
 
 func (hs HashSize) String() string {
 	switch hs {
 	case HashSize256:
 		return "HashSize(256)"
+	case HashSize192:
+		return "HashSize(192)"
 	case HashSize160:
 		return "HashSize(160)"
 	}
@@ -219,12 +221,13 @@ func blakeIt(data []byte, sz HashSize) []byte {
 		ret := common.Blake2b160(data)
 		return ret[:]
 	case HashSize192:
-		panic("24-byte hashing not implemented")
+		ret := common.Blake2b192(data)
+		return ret[:]
 	case HashSize256:
 		ret := blake2b.Sum256(data)
 		return ret[:]
 	}
-	panic("must be 160 of 256")
+	panic("must be 160, 192 or 256")
 }
 
 // makeHashVector makes the node vector to be hashed. Missing children are nil

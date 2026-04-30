@@ -316,6 +316,15 @@ func Blake2b160(data []byte) (ret [20]byte) {
 	return
 }
 
+func Blake2b192(data []byte) (ret [24]byte) {
+	hash, _ := blake2b.New(24, nil)
+	if _, err := hash.Write(data); err != nil {
+		panic(err)
+	}
+	copy(ret[:], hash.Sum(nil))
+	return
+}
+
 func IsNil(p interface{}) bool {
 	return p == nil || (reflect.ValueOf(p).Kind() == reflect.Ptr && reflect.ValueOf(p).IsNil())
 }

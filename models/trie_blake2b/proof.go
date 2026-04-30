@@ -78,7 +78,7 @@ func (p *MerkleProof) Read(r io.Reader) error {
 		return err
 	}
 	p.HashSize = HashSize(b)
-	if p.HashSize != HashSize256 && p.HashSize != HashSize160 {
+	if p.HashSize != HashSize256 && p.HashSize != HashSize192 && p.HashSize != HashSize160 {
 		return errors.New("wrong hash size")
 	}
 

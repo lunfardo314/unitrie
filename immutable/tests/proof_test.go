@@ -28,10 +28,13 @@ func TestProofIdentityBlake2b(t *testing.T) {
 		require.NoError(t, err)
 	}
 	runTest(common.PathArity256, trie_blake2b.HashSize256)
+	runTest(common.PathArity256, trie_blake2b.HashSize192)
 	runTest(common.PathArity256, trie_blake2b.HashSize160)
 	runTest(common.PathArity16, trie_blake2b.HashSize256)
+	runTest(common.PathArity16, trie_blake2b.HashSize192)
 	runTest(common.PathArity16, trie_blake2b.HashSize160)
 	runTest(common.PathArity2, trie_blake2b.HashSize256)
+	runTest(common.PathArity2, trie_blake2b.HashSize192)
 	runTest(common.PathArity2, trie_blake2b.HashSize160)
 }
 
@@ -71,10 +74,13 @@ func TestProofScenariosBlake2b(t *testing.T) {
 	}
 	runScenario := func(scenario []string) {
 		runTest(common.PathArity256, trie_blake2b.HashSize256, scenario)
+		runTest(common.PathArity256, trie_blake2b.HashSize192, scenario)
 		runTest(common.PathArity256, trie_blake2b.HashSize160, scenario)
 		runTest(common.PathArity16, trie_blake2b.HashSize256, scenario)
+		runTest(common.PathArity16, trie_blake2b.HashSize192, scenario)
 		runTest(common.PathArity16, trie_blake2b.HashSize160, scenario)
 		runTest(common.PathArity2, trie_blake2b.HashSize256, scenario)
+		runTest(common.PathArity2, trie_blake2b.HashSize192, scenario)
 		runTest(common.PathArity2, trie_blake2b.HashSize160, scenario)
 	}
 	//runScenario([]string{"a"})
