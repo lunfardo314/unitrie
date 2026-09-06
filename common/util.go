@@ -177,9 +177,11 @@ func ReadBytes16(r io.Reader) ([]byte, error) {
 	if length == 0 {
 		return []byte{}, nil
 	}
+	// io.ReadFull rather than a single r.Read: the latter can under-fill the
+	// buffer on a short stream and return no error, leaving trailing zero bytes.
+	// The length is a uint16, so the allocation is bounded (<=64 KiB).
 	ret := make([]byte, length)
-	_, err = r.Read(ret)
-	if err != nil {
+	if _, err = io.ReadFull(r, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
@@ -251,12 +253,17 @@ func ReadBytes32(r io.Reader) ([]byte, error) {
 	if length == 0 {
 		return []byte{}, nil
 	}
-	ret := make([]byte, length)
-	_, err = r.Read(ret)
-	if err != nil {
+	// Do not pre-allocate `length` bytes: the prefix is untrusted (a crafted
+	// snapshot or DB record can claim up to 4 GiB). io.CopyN grows the buffer to
+	// the bytes actually present and returns io.ErrUnexpectedEOF on a short
+	// stream, so a bogus length can no longer force a giant allocation. It also
+	// reads to completion, unlike the earlier single r.Read which could
+	// silently under-fill.
+	var buf bytes.Buffer
+	if _, err = io.CopyN(&buf, r, int64(length)); err != nil {
 		return nil, err
 	}
-	return ret, nil
+	return buf.Bytes(), nil
 }
 
 func WriteBytes32(w io.Writer, data []byte) error {
