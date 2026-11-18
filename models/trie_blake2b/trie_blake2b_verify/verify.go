@@ -31,11 +31,6 @@ func MustKeyWithTerminal(p *trie_blake2b.MerkleProof) ([]byte, []byte) {
 	}
 	lastElem := p.Path[len(p.Path)-1]
 	switch {
-	case p.PathArity.IsValidChildIndex(lastElem.ChildIndex):
-		if _, ok := lastElem.Children[byte(lastElem.ChildIndex)]; ok {
-			panic("nil child commitment expected for proof of absence")
-		}
-		return p.Key, nil
 	case lastElem.ChildIndex == p.PathArity.TerminalCommitmentIndex():
 		if lastElem.Terminal == nil {
 			return p.Key, nil
@@ -109,6 +104,9 @@ func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) (
 		if nextKeyIdx > len(p.Key) {
 			return nil, fmt.Errorf("wrong proof: proof path out of key bounds. Path position: %d, key position %d", pathIdx, keyIdx)
 		}
+		if elem.ChildIndex != int(p.Key[nextKeyIdx-1]) {
+			return nil, fmt.Errorf("wrong proof: child index does not follow the key. Path position: %d, key position %d", pathIdx, keyIdx)
+		}
 		nextTriePath := common.Concat(triePath, elem.PathFragment, p.Key[nextKeyIdx-1])
 		c, err := verify(p, nextTriePath, pathIdx+1, nextKeyIdx)
 		if err != nil {
@@ -116,16 +114,27 @@ func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) (
 		}
 		return hashProofElement(elem, triePath, c, p.PathArity, p.HashSize)
 	}
-	// it is the last in the path
-	if p.PathArity.IsValidChildIndex(elem.ChildIndex) {
-		c := elem.Children[byte(elem.ChildIndex)]
-		if c != nil {
-			return nil, fmt.Errorf("wrong proof: child commitment of the last element expected to be nil. Path position: %d, key position %d", pathIdx, keyIdx)
+	// It is the last in the path. Its child index does not enter the hash, so the
+	// element must be checked against the key here: otherwise a proof about one
+	// key, or a proof of absence, would validate as presence of another key.
+	switch elem.ChildIndex {
+	case p.PathArity.TerminalCommitmentIndex():
+		// the node sits exactly at the key: its terminal is the value, no terminal is absence
+		if !bytes.Equal(tail, elem.PathFragment) {
+			return nil, fmt.Errorf("wrong proof: terminal of the last element is not at the key. Path position: %d, key position %d", pathIdx, keyIdx)
 		}
-		return hashProofElement(elem, triePath, nil, p.PathArity, p.HashSize)
-	}
-	if elem.ChildIndex != p.PathArity.TerminalCommitmentIndex() && elem.ChildIndex != p.PathArity.PathCommitmentIndex() {
-		return nil, fmt.Errorf("wrong proof: child index expected to be %d or %d. Path position: %d, key position %d",
+	case p.PathArity.PathCommitmentIndex():
+		// absence: the path fragment leaves the key, or ends before it with no child at the key's next nibble
+		if isPrefix {
+			if len(tail) == len(elem.PathFragment) {
+				return nil, fmt.Errorf("wrong proof: path of the last element ends at the key, terminal ending expected. Path position: %d, key position %d", pathIdx, keyIdx)
+			}
+			if _, ok := elem.Children[tail[len(elem.PathFragment)]]; ok {
+				return nil, fmt.Errorf("wrong proof: the last element has a child on the key's path. Path position: %d, key position %d", pathIdx, keyIdx)
+			}
+		}
+	default:
+		return nil, fmt.Errorf("wrong proof: child index of the last element expected to be %d or %d. Path position: %d, key position %d",
 			p.PathArity.TerminalCommitmentIndex(), p.PathArity.PathCommitmentIndex(), pathIdx, keyIdx)
 	}
 	return hashProofElement(elem, triePath, nil, p.PathArity, p.HashSize)

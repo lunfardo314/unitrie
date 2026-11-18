@@ -300,7 +300,8 @@ func (b BinaryStreamIterator) Iterate(fun func(k []byte, v []byte) bool) error {
 		}
 		v, err := ReadBytes32(b.r)
 		if err != nil {
-			return err
+			// a key without its value is a truncated stream, not its end
+			return unexpectedEOF(err)
 		}
 		if !fun(k, v) {
 			return nil

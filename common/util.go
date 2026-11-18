@@ -147,16 +147,15 @@ func ReadBytes8(r io.Reader) ([]byte, error) {
 		return []byte{}, nil
 	}
 	ret := make([]byte, length)
-	_, err = r.Read(ret)
-	if err != nil {
-		return nil, err
+	if _, err = io.ReadFull(r, ret); err != nil {
+		return nil, unexpectedEOF(err)
 	}
 	return ret, nil
 }
 
 func WriteBytes8(w io.Writer, data []byte) error {
-	if len(data) > 256 {
-		panic(fmt.Sprintf("WriteBytes8: too long data (%v)", len(data)))
+	if len(data) > math.MaxUint8 {
+		return fmt.Errorf("WriteBytes8: too long data (%v)", len(data))
 	}
 	err := WriteByte(w, byte(len(data)))
 	if err != nil {
@@ -182,14 +181,14 @@ func ReadBytes16(r io.Reader) ([]byte, error) {
 	// The length is a uint16, so the allocation is bounded (<=64 KiB).
 	ret := make([]byte, length)
 	if _, err = io.ReadFull(r, ret); err != nil {
-		return nil, err
+		return nil, unexpectedEOF(err)
 	}
 	return ret, nil
 }
 
 func WriteBytes16(w io.Writer, data []byte) error {
 	if len(data) > math.MaxUint16 {
-		panic(fmt.Sprintf("WriteBytes16: too long data (%v)", len(data)))
+		return fmt.Errorf("WriteBytes16: too long data (%v)", len(data))
 	}
 	err := WriteUint16(w, uint16(len(data)))
 	if err != nil {
@@ -201,10 +200,14 @@ func WriteBytes16(w io.Writer, data []byte) error {
 	return err
 }
 
+// The fixed-size readers below use io.ReadFull: a single r.Read may return
+// fewer bytes and no error. A stream ending before the first byte still returns
+// io.EOF, so a reader looping until io.EOF stops cleanly between records, while
+// a record cut inside returns io.ErrUnexpectedEOF.
+
 func ReadUint16(r io.Reader, pval *uint16) error {
 	var tmp2 [2]byte
-	_, err := r.Read(tmp2[:])
-	if err != nil {
+	if _, err := io.ReadFull(r, tmp2[:]); err != nil {
 		return err
 	}
 	*pval = binary.LittleEndian.Uint16(tmp2[:])
@@ -231,8 +234,7 @@ func Uint16From2Bytes(b []byte) (uint16, error) {
 
 func ReadByte(r io.Reader) (byte, error) {
 	var b [1]byte
-	_, err := r.Read(b[:])
-	if err != nil {
+	if _, err := io.ReadFull(r, b[:]); err != nil {
 		return 0, err
 	}
 	return b[0], nil
@@ -261,14 +263,14 @@ func ReadBytes32(r io.Reader) ([]byte, error) {
 	// silently under-fill.
 	var buf bytes.Buffer
 	if _, err = io.CopyN(&buf, r, int64(length)); err != nil {
-		return nil, err
+		return nil, unexpectedEOF(err)
 	}
 	return buf.Bytes(), nil
 }
 
 func WriteBytes32(w io.Writer, data []byte) error {
 	if len(data) > math.MaxUint32 {
-		panic(fmt.Sprintf("WriteBytes32: too long data (%v)", len(data)))
+		return fmt.Errorf("WriteBytes32: too long data (%v)", len(data))
 	}
 	err := WriteUint32(w, uint32(len(data)))
 	if err != nil {
@@ -301,12 +303,20 @@ func MustUint32From4Bytes(b []byte) uint32 {
 
 func ReadUint32(r io.Reader, pval *uint32) error {
 	var tmp4 [4]byte
-	_, err := r.Read(tmp4[:])
-	if err != nil {
+	if _, err := io.ReadFull(r, tmp4[:]); err != nil {
 		return err
 	}
 	*pval = MustUint32From4Bytes(tmp4[:])
 	return nil
+}
+
+// unexpectedEOF maps io.EOF met after a length prefix to io.ErrUnexpectedEOF:
+// the record was announced, so its absence is a truncation, not the clean end.
+func unexpectedEOF(err error) error {
+	if errors.Is(err, io.EOF) {
+		return io.ErrUnexpectedEOF
+	}
+	return err
 }
 
 func WriteUint32(w io.Writer, val uint32) error {

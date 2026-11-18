@@ -4,14 +4,22 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"math"
 
 	"github.com/lunfardo314/unitrie/common"
 )
+
+// MaxKeyLength is the longest key the trie can store: a node's path fragment is
+// serialized with a 16-bit length, and with any arity the fragment of a key of
+// L bytes encodes to at most L+1 bytes. A caller taking keys from untrusted
+// input checks it before Update, which asserts it.
+const MaxKeyLength = math.MaxUint16 - 1
 
 // Update updates TrieUpdatable with the unpackedKey/value. Reorganizes and re-calculates trie, keeps cache consistent
 func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
 	common.Assertf(!common.IsNil(tr.persistentRoot), "Update:: updatable trie is invalidated")
 	common.Assertf(len(key) > 0, "identity of the state can't be changed")
+	common.Assertf(len(key) <= MaxKeyLength, "Update:: key longer than %d bytes", MaxKeyLength)
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
 	if len(value) == 0 {
 		return tr.delete(unpackedTriePath)
@@ -24,6 +32,7 @@ func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
 func (tr *TrieUpdatable) Delete(key []byte) bool {
 	common.Assertf(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie is invalidated")
 	common.Assertf(len(key) > 0, "can't delete root")
+	common.Assertf(len(key) <= MaxKeyLength, "Delete:: key longer than %d bytes", MaxKeyLength)
 	return tr.delete(common.UnpackBytes(key, tr.PathArity()))
 }
 
@@ -61,7 +70,8 @@ func (tr *TrieReader) Get(key []byte) []byte {
 	if valueInCommitment {
 		common.Assertf(len(value) > 0, "value in commitment must be not nil. Unpacked key: '%s'",
 			func() string { return hex.EncodeToString(unpackedTriePath) })
-		return value
+		// a copy: the value is the cached node's own bytes, which a later commit hashes
+		return bytes.Clone(value)
 	}
 	value = tr.nodeStore.valueStore.Get(common.AsKey(terminal))
 	common.Assertf(len(value) > 0, "value in the value store must be not nil. Unpacked key: '%s'",
@@ -238,8 +248,8 @@ func (tr *TrieUpdatable) delete(triePath []byte) bool {
 		ends = ending
 	})
 	common.Assertf(len(nodes) > 0, "len(nodes) > 0")
-	if ends != common.EndingTerminal {
-		// the key is not present in the trie, do nothing
+	if ends != common.EndingTerminal || nodes[len(nodes)-1].terminal == nil {
+		// the key is not present in the trie (a node without terminal at the key is a branch), do nothing
 		return false
 	}
 
@@ -338,7 +348,10 @@ func (tr *TrieReader) iterate(root common.VCommitment, triePath []byte, fun func
 			if extractValue {
 				var inTheCommitment bool
 				value, inTheCommitment = n.Terminal.ExtractValue()
-				if !inTheCommitment {
+				if inTheCommitment {
+					// a copy: the value is the cached node's own bytes
+					value = bytes.Clone(value)
+				} else {
 					value = tr.nodeStore.valueStore.Get(common.AsKey(n.Terminal))
 					common.Assertf(len(value) > 0, "can't fetch value. triePath: '%s', data commitment: %s",
 						func() string { return hex.EncodeToString(key) }, n.Terminal)
@@ -374,7 +387,8 @@ func (tr *TrieUpdatable) deletePrefix(pathPrefix []byte) bool {
 	prefixExists := false
 	tr.traverseMutatedPath(pathPrefix, func(n *bufferedNode, ending common.PathEndingCode) {
 		nodes = append(nodes, n)
-		if bytes.HasPrefix(common.Concat(n.triePath, n.nodeData.PathFragment), pathPrefix) {
+		// the buffered fragment: the persisted one is stale for a node split or created in this batch
+		if bytes.HasPrefix(common.Concat(n.triePath, n.pathFragment), pathPrefix) {
 			prefixExists = true
 		}
 	})

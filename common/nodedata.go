@@ -103,12 +103,8 @@ func newCflags(arity PathArity) cflags {
 
 func readCflags(r io.Reader, arity PathArity) (cflags, error) {
 	ret := newCflags(arity)
-	n, err := r.Read(ret)
-	if err != nil {
-		return nil, err
-	}
-	if n != cflagsSize(arity) {
-		return nil, fmt.Errorf("expected %d bytes, got %d", cflagsSize(arity), n)
+	if _, err := io.ReadFull(r, ret); err != nil {
+		return nil, fmt.Errorf("reading %d bytes of child flags: %w", cflagsSize(arity), err)
 	}
 	return ret, nil
 }

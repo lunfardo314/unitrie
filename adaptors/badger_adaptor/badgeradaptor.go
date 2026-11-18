@@ -127,6 +127,9 @@ func (a *DB) Iterator(prefix []byte) common.KVIterator {
 
 const iteratorPrefetchSize = 10
 
+// Iterate and IterateKeys hand the callback copies: badger's own key and value
+// slices are valid only until the iterator moves on and are then reused, so a
+// callback keeping one would see it overwritten by a later item.
 func (it *badgerAdaptorIterator) Iterate(fun func(k []byte, v []byte) bool) {
 	err := common.CatchPanicOrError(func() error {
 		return it.db.View(func(txn *badger.Txn) error {
@@ -136,22 +139,29 @@ func (it *badgerAdaptorIterator) Iterate(fun func(k []byte, v []byte) bool) {
 			dbIt := txn.NewIterator(opts)
 			defer dbIt.Close()
 
-			exit := false
-			for dbIt.Seek(it.prefix); !exit && dbIt.ValidForPrefix(it.prefix); dbIt.Next() {
-				err := dbIt.Item().Value(func(val []byte) error {
-					exit = !fun(dbIt.Item().Key(), val)
-					return nil
-				})
+			for dbIt.Seek(it.prefix); dbIt.ValidForPrefix(it.prefix); dbIt.Next() {
+				item := dbIt.Item()
+				v, err := item.ValueCopy(nil)
 				if err != nil {
 					return err
+				}
+				if !fun(item.KeyCopy(nil), v) {
+					return nil
 				}
 			}
 			return nil
 		})
 	})
+	mustIterationSucceed(err)
+}
+
+// mustIterationSucceed raises what the iteration met, like Get and Has do: an
+// error or a panic in the callback must not end the iteration as if it were complete.
+func mustIterationSucceed(err error) {
 	if errors.Is(err, badger.ErrDBClosed) {
 		panic(common.ErrDBUnavailable)
 	}
+	common.AssertNoError(err)
 }
 
 func (it *badgerAdaptorIterator) IterateKeys(fun func(k []byte) bool) {
@@ -159,19 +169,18 @@ func (it *badgerAdaptorIterator) IterateKeys(fun func(k []byte) bool) {
 		return it.db.View(func(txn *badger.Txn) error {
 			opts := badger.DefaultIteratorOptions
 			opts.PrefetchSize = iteratorPrefetchSize
+			opts.PrefetchValues = false
 
 			dbIt := txn.NewIterator(opts)
 			defer dbIt.Close()
 
 			for dbIt.Seek(it.prefix); dbIt.ValidForPrefix(it.prefix); dbIt.Next() {
-				if !fun(dbIt.Item().Key()) {
+				if !fun(dbIt.Item().KeyCopy(nil)) {
 					return nil
 				}
 			}
 			return nil
 		})
 	})
-	if errors.Is(err, badger.ErrDBClosed) {
-		panic(common.ErrDBUnavailable)
-	}
+	mustIterationSucceed(err)
 }

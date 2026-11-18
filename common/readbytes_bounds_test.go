@@ -22,9 +22,10 @@ func TestReadBytes32BogusLength(t *testing.T) {
 
 	_, err := ReadBytes32(&buf)
 	// The point is that it errors after reading the available bytes rather than
-	// pre-allocating ~4 GiB; io.CopyN surfaces the short stream as io.EOF.
+	// pre-allocating ~4 GiB. The record was announced by its prefix, so the short
+	// stream is a truncation, not the clean end of the stream.
 	require.Error(t, err)
-	require.ErrorIs(t, err, io.EOF)
+	require.ErrorIs(t, err, io.ErrUnexpectedEOF)
 }
 
 // TestReadBytes32RoundTrip confirms well-formed data still round-trips exactly.

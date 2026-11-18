@@ -47,7 +47,8 @@ func decode16(data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, ErrEmpty
 	}
-	if data[0] > 1 {
+	// an odd count needs a packed byte to cut the padding nibble from
+	if data[0] > 1 || (data[0] == 1 && len(data) < 2) {
 		return nil, ErrWrongFormat
 	}
 	ret := make([]byte, 0, len(data)*2)
@@ -112,13 +113,12 @@ func decode2(data []byte) ([]byte, error) {
 	if len(data) == 0 {
 		return nil, ErrEmpty
 	}
-	if data[0] > 7 {
+	// padding bits need a packed byte to be cut from
+	if data[0] > 7 || (data[0] > 0 && len(data) < 2) {
 		return nil, ErrWrongFormat
 	}
 	ret := make([]byte, 0, len(data)*8)
 	ret = unpack2(ret, data[1:])
-	Assertf(len(ret) >= int(data[0]), "trie::decode2:: assert failed: len(ret) >= int(data[0]), data: %s",
-		func() string { return hex.EncodeToString(data) })
 	// enforce the last data[0] elements are 0
 	for j := len(ret) - int(data[0]); j < len(ret); j++ {
 		if ret[j] != 0 {

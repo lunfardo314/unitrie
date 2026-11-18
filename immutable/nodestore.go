@@ -3,6 +3,7 @@ package immutable
 import (
 	"container/list"
 	"encoding/hex"
+	"sync"
 
 	"github.com/lunfardo314/unitrie/common"
 )
@@ -18,12 +19,16 @@ import (
 // running on the same baseline across consecutive branch commits).
 //
 // clearCacheAtSize == 0 disables caching entirely (no allocations).
+//
+// The cache is guarded by a mutex: an LRU hit reorders the list, so even
+// concurrent reads through one reader would otherwise corrupt it.
 type NodeStore struct {
 	m          common.CommitmentModel
 	trieStore  common.KVReader
 	valueStore common.KVReader
 
 	cacheCapacity int
+	cacheMutex    sync.Mutex
 	cacheList     *list.List               // front = MRU, back = LRU; nil iff caching disabled
 	cacheMap      map[string]*list.Element // dbKey -> element holding *cacheEntry; nil iff caching disabled
 }
@@ -79,9 +84,8 @@ func openImmutableNodeStore(store common.KVReader, model common.CommitmentModel,
 func (ns *NodeStore) FetchNodeData(nodeCommitment common.VCommitment) (*common.NodeData, bool) {
 	dbKey := common.AsKey(nodeCommitment)
 	if ns.cacheCapacity > 0 {
-		if elem, inCache := ns.cacheMap[string(dbKey)]; inCache {
-			ns.cacheList.MoveToFront(elem)
-			return elem.Value.(*cacheEntry).data, true
+		if ret := ns.cacheGet(string(dbKey)); ret != nil {
+			return ret, true
 		}
 	}
 	nodeBin := ns.trieStore.Get(dbKey)
@@ -97,17 +101,37 @@ func (ns *NodeStore) FetchNodeData(nodeCommitment common.VCommitment) (*common.N
 	ret.Commitment = nodeCommitment
 
 	if ns.cacheCapacity > 0 {
-		entry := &cacheEntry{key: string(dbKey), data: ret}
-		elem := ns.cacheList.PushFront(entry)
-		ns.cacheMap[entry.key] = elem
-		// evict LRU until within capacity
-		for ns.cacheList.Len() > ns.cacheCapacity {
-			oldest := ns.cacheList.Back()
-			ns.cacheList.Remove(oldest)
-			delete(ns.cacheMap, oldest.Value.(*cacheEntry).key)
-		}
+		ns.cachePut(string(dbKey), ret)
 	}
 	return ret, true
+}
+
+func (ns *NodeStore) cacheGet(key string) *common.NodeData {
+	ns.cacheMutex.Lock()
+	defer ns.cacheMutex.Unlock()
+
+	elem, inCache := ns.cacheMap[key]
+	if !inCache {
+		return nil
+	}
+	ns.cacheList.MoveToFront(elem)
+	return elem.Value.(*cacheEntry).data
+}
+
+func (ns *NodeStore) cachePut(key string, data *common.NodeData) {
+	ns.cacheMutex.Lock()
+	defer ns.cacheMutex.Unlock()
+
+	if _, inCache := ns.cacheMap[key]; inCache {
+		return // another reader fetched it meanwhile
+	}
+	ns.cacheMap[key] = ns.cacheList.PushFront(&cacheEntry{key: key, data: data})
+	// evict LRU until within capacity
+	for ns.cacheList.Len() > ns.cacheCapacity {
+		oldest := ns.cacheList.Back()
+		ns.cacheList.Remove(oldest)
+		delete(ns.cacheMap, oldest.Value.(*cacheEntry).key)
+	}
 }
 
 func (ns *NodeStore) MustFetchNodeData(nodeCommitment common.VCommitment) *common.NodeData {
@@ -131,6 +155,9 @@ func (ns *NodeStore) FetchChild(n *common.NodeData, childIdx byte, trieKey []byt
 }
 
 func (ns *NodeStore) clearCache() {
+	ns.cacheMutex.Lock()
+	defer ns.cacheMutex.Unlock()
+
 	if ns.cacheList != nil {
 		ns.cacheList.Init()
 	}

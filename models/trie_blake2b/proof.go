@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/lunfardo314/unitrie/common"
 )
@@ -72,6 +73,9 @@ func (p *MerkleProof) Read(r io.Reader) error {
 		return err
 	}
 	p.PathArity = common.PathArity(b)
+	if !slices.Contains(common.AllPathArity, p.PathArity) {
+		return common.ErrWrongArity
+	}
 
 	b, err = common.ReadByte(r)
 	if err != nil {
@@ -177,9 +181,17 @@ func (e *MerkleProofElement) Read(r io.Reader, arity common.PathArity, sz HashSi
 	if smallFlags, err = common.ReadByte(r); err != nil {
 		return err
 	}
+	// every accepted proof has exactly one encoding: no undefined flag bits,
+	// no empty terminal, no child flags beyond the arity, no empty child set
+	if smallFlags&^(hasTerminalValueFlag|hasChildrenFlag) != 0 {
+		return errors.New("wrong proof element flags")
+	}
 	if smallFlags&hasTerminalValueFlag != 0 {
 		if e.Terminal, err = common.ReadBytes8(r); err != nil {
 			return err
+		}
+		if len(e.Terminal) == 0 {
+			return errors.New("empty terminal commitment in proof element")
 		}
 	} else {
 		e.Terminal = nil
@@ -187,17 +199,24 @@ func (e *MerkleProofElement) Read(r io.Reader, arity common.PathArity, sz HashSi
 	e.Children = make(map[byte][]byte)
 	if smallFlags&hasChildrenFlag != 0 {
 		var flags [32]byte
-		if _, err = r.Read(flags[:]); err != nil {
+		if _, err = io.ReadFull(r, flags[:]); err != nil {
 			return err
 		}
-		for i := 0; i < arity.NumChildren(); i++ {
-			ib := uint8(i)
-			if flags[i/8]&(0x1<<(i%8)) != 0 {
-				e.Children[ib] = make([]byte, sz)
-				if _, err = r.Read(e.Children[ib]); err != nil {
-					return err
-				}
+		for i := 0; i < len(flags)*8; i++ {
+			if flags[i/8]&(0x1<<(i%8)) == 0 {
+				continue
 			}
+			if i >= arity.NumChildren() {
+				return errors.New("child flag beyond the arity in proof element")
+			}
+			ib := uint8(i)
+			e.Children[ib] = make([]byte, sz)
+			if _, err = io.ReadFull(r, e.Children[ib]); err != nil {
+				return err
+			}
+		}
+		if len(e.Children) == 0 {
+			return errors.New("children flag set with no children in proof element")
 		}
 	}
 	return nil

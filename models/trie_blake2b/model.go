@@ -4,7 +4,6 @@ package trie_blake2b
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 
@@ -273,7 +272,7 @@ func (v vectorCommitment) Bytes() []byte {
 }
 
 func (v vectorCommitment) Read(r io.Reader) error {
-	_, err := r.Read(v)
+	_, err := io.ReadFull(r, v)
 	return err
 }
 
@@ -353,12 +352,8 @@ func (t *terminalCommitment) Read(r io.Reader) error {
 	if l > 0 {
 		t.bytes = make([]byte, l)
 
-		n, err := r.Read(t.bytes)
-		if err != nil {
+		if _, err := io.ReadFull(r, t.bytes); err != nil {
 			return err
-		}
-		if n != int(l) {
-			return errors.New("bad data length")
 		}
 	}
 	return nil
