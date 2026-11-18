@@ -20,6 +20,7 @@ func (tr *TrieUpdatable) Update(key []byte, value []byte) bool {
 	common.Assertf(!common.IsNil(tr.persistentRoot), "Update:: updatable trie is invalidated")
 	common.Assertf(len(key) > 0, "identity of the state can't be changed")
 	common.Assertf(len(key) <= MaxKeyLength, "Update:: key longer than %d bytes", MaxKeyLength)
+	common.Assertf(len(key) >= tr.Model().MinKeyLength(), "Update:: key shorter than %d bytes", tr.Model().MinKeyLength())
 	unpackedTriePath := common.UnpackBytes(key, tr.PathArity())
 	if len(value) == 0 {
 		return tr.delete(unpackedTriePath)
@@ -33,6 +34,7 @@ func (tr *TrieUpdatable) Delete(key []byte) bool {
 	common.Assertf(!common.IsNil(tr.persistentRoot), "Delete:: updatable trie is invalidated")
 	common.Assertf(len(key) > 0, "can't delete root")
 	common.Assertf(len(key) <= MaxKeyLength, "Delete:: key longer than %d bytes", MaxKeyLength)
+	common.Assertf(len(key) >= tr.Model().MinKeyLength(), "Delete:: key shorter than %d bytes", tr.Model().MinKeyLength())
 	return tr.delete(common.UnpackBytes(key, tr.PathArity()))
 }
 

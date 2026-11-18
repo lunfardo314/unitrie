@@ -14,7 +14,7 @@ import (
 func TestProofIdentityBlake2b(t *testing.T) {
 	const identity = "idididididid"
 	runTest := func(arity common.PathArity, hashSize trie_blake2b.HashSize) {
-		m := trie_blake2b.New(arity, hashSize)
+		m := trie_blake2b.New(arity, hashSize, 0)
 		store := common.NewInMemoryKVStore()
 		initRoot := immutable.MustInitRoot(store, m, []byte(identity))
 		tr, err := immutable.NewTrieReader(m, store, initRoot)
@@ -41,7 +41,7 @@ func TestProofIdentityBlake2b(t *testing.T) {
 func TestProofScenariosBlake2b(t *testing.T) {
 	const identity = "idididididid"
 	runTest := func(arity common.PathArity, hashSize trie_blake2b.HashSize, scenario []string) {
-		m := trie_blake2b.New(arity, hashSize)
+		m := trie_blake2b.New(arity, hashSize, 0)
 		store := common.NewInMemoryKVStore()
 		initRoot := immutable.MustInitRoot(store, m, []byte(identity))
 		tr, err := immutable.NewTrieChained(m, store, initRoot)

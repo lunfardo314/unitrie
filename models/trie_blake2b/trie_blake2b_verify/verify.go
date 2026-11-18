@@ -57,6 +57,11 @@ func Validate(p *trie_blake2b.MerkleProof, rootBytes []byte) error {
 		}
 		return nil
 	}
+	if !p.HashedPath && len(p.Key) < int(p.HashSize) {
+		// with unhashed short paths a key this short commits like the same key
+		// extended by zeros, so the proof cannot tell which one it is about
+		return xerrors.New("invalid proof: key too short for a trie with unhashed paths")
+	}
 	c, err := verify(p, nil, 0, 0)
 	if err != nil {
 		return err
@@ -112,7 +117,7 @@ func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) (
 		if err != nil {
 			return nil, err
 		}
-		return hashProofElement(elem, triePath, c, p.PathArity, p.HashSize)
+		return hashProofElement(elem, triePath, c, p.PathArity, p.HashSize, p.HashedPath)
 	}
 	// It is the last in the path. Its child index does not enter the hash, so the
 	// element must be checked against the key here: otherwise a proof about one
@@ -137,12 +142,12 @@ func verify(p *trie_blake2b.MerkleProof, triePath []byte, pathIdx, keyIdx int) (
 		return nil, fmt.Errorf("wrong proof: child index of the last element expected to be %d or %d. Path position: %d, key position %d",
 			p.PathArity.TerminalCommitmentIndex(), p.PathArity.PathCommitmentIndex(), pathIdx, keyIdx)
 	}
-	return hashProofElement(elem, triePath, nil, p.PathArity, p.HashSize)
+	return hashProofElement(elem, triePath, nil, p.PathArity, p.HashSize, p.HashedPath)
 }
 
 const errTooLongCommitment = "too long commitment at position %d. Can't be longer than %d bytes"
 
-func makeHashVector(e *trie_blake2b.MerkleProofElement, nodePath []byte, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize) ([][]byte, error) {
+func makeHashVector(e *trie_blake2b.MerkleProofElement, nodePath []byte, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize, hashedPath bool) ([][]byte, error) {
 	hashes := make([][]byte, arity.VectorLength())
 	for idx, c := range e.Children {
 		if !arity.IsValidChildIndex(int(idx)) {
@@ -160,9 +165,7 @@ func makeHashVector(e *trie_blake2b.MerkleProofElement, nodePath []byte, missing
 		hashes[arity.TerminalCommitmentIndex()] = e.Terminal
 	}
 
-	pathToCommit := common.Concat(nodePath, byte('+'), e.PathFragment)
-	rawBytes, _ := trie_blake2b.CompressToHashSize(pathToCommit, sz)
-	hashes[arity.PathCommitmentIndex()] = rawBytes
+	hashes[arity.PathCommitmentIndex()] = trie_blake2b.CommitToPath(nodePath, e.PathFragment, sz, hashedPath)
 	if arity.IsValidChildIndex(e.ChildIndex) {
 		if len(missingCommitment) > int(sz) {
 			return nil, fmt.Errorf(errTooLongCommitment+" (skipped commitment)", e.ChildIndex, int(sz))
@@ -172,8 +175,8 @@ func makeHashVector(e *trie_blake2b.MerkleProofElement, nodePath []byte, missing
 	return hashes, nil
 }
 
-func hashProofElement(e *trie_blake2b.MerkleProofElement, nodePath []byte, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize) ([]byte, error) {
-	hashVector, err := makeHashVector(e, nodePath, missingCommitment, arity, sz)
+func hashProofElement(e *trie_blake2b.MerkleProofElement, nodePath []byte, missingCommitment []byte, arity common.PathArity, sz trie_blake2b.HashSize, hashedPath bool) ([]byte, error) {
+	hashVector, err := makeHashVector(e, nodePath, missingCommitment, arity, sz, hashedPath)
 	if err != nil {
 		return nil, err
 	}

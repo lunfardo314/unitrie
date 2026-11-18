@@ -10,10 +10,11 @@ func (m *CommitmentModel) ProofImmutable(key []byte, tr *immutable.TrieReader) *
 	unpackedKey := common.UnpackBytes(key, tr.PathArity())
 	nodePath, ending := tr.NodePath(unpackedKey)
 	ret := &MerkleProof{
-		PathArity: tr.PathArity(),
-		HashSize:  m.hashSize,
-		Key:       unpackedKey,
-		Path:      make([]*MerkleProofElement, len(nodePath)),
+		PathArity:  tr.PathArity(),
+		HashSize:   m.hashSize,
+		HashedPath: m.hashedPath,
+		Key:        unpackedKey,
+		Path:       make([]*MerkleProofElement, len(nodePath)),
 	}
 	for i, e := range nodePath {
 		elem := &MerkleProofElement{

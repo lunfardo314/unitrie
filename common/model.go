@@ -8,6 +8,8 @@ import (
 type CommitmentModel interface {
 	// PathArity is used by implementations to optimize operations
 	PathArity() PathArity
+	// MinKeyLength is the shortest key the trie accepts
+	MinKeyLength() int
 	// EqualCommitments compares two commitments
 	EqualCommitments(c1, c2 Serializable) bool
 	// NewVectorCommitment creates empty trie_go.VCommitment

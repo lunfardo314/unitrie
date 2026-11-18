@@ -33,7 +33,7 @@ type proofFixture struct {
 // terminal vs hashed terminal), and lists keys absent from it.
 func newProofFixture(t *testing.T, arity common.PathArity, sz trie_blake2b.HashSize, seed int64) *proofFixture {
 	rnd := rand.New(rand.NewSource(seed))
-	m := trie_blake2b.New(arity, sz)
+	m := trie_blake2b.New(arity, sz, 0)
 	store := common.NewInMemoryKVStore()
 	root := immutable.MustInitRoot(store, m, []byte("identity"))
 	tr, err := immutable.NewTrieUpdatable(m, store, root)

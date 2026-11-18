@@ -52,6 +52,8 @@ const terminalCommitmentSizeMaxDefault = 63 // must fit into 6 bits
 type CommitmentModel struct {
 	hashSize                       HashSize
 	arity                          common.PathArity
+	minKeyLength                   int
+	hashedPath                     bool
 	terminalCommitmentSizeMax      int
 	valueSizeOptimizationThreshold int
 }
@@ -66,7 +68,17 @@ type CommitmentModel struct {
 // If valueSizeOptimizationThreshold > 0 valueStore must be specified in the trie parameters
 // Reasonable value of valueSizeOptimizationThreshold, allows significantly optimize trie storage without
 // requiring hashing big data each time
-func New(arity common.PathArity, hashSize HashSize, valueSizeOptimizationThreshold ...int) *CommitmentModel {
+//
+// Parameter minKeyLength is the shortest key the trie accepts; Update and Delete
+// refuse shorter keys. It decides how a node's path enters its commitment. A path
+// that fits in the hash size used to be copied in unhashed and zero-padded, so a
+// key and the same key extended by zero bytes could commit identically: two tries,
+// one root. With keys of at least HashSize path units (nibbles for arity 16, bits
+// for arity 2, bytes for arity 256; 12 bytes with arity 16 and 24-byte hashes) the
+// path of every node holding a key is longer than the hash size and always hashed,
+// which keeps that encoding unambiguous: such a model commits exactly as before.
+// With shorter keys allowed, every path is hashed.
+func New(arity common.PathArity, hashSize HashSize, minKeyLength int, valueSizeOptimizationThreshold ...int) *CommitmentModel {
 	t := 0
 	if len(valueSizeOptimizationThreshold) > 0 {
 		t = valueSizeOptimizationThreshold[0]
@@ -74,6 +86,8 @@ func New(arity common.PathArity, hashSize HashSize, valueSizeOptimizationThresho
 	ret := &CommitmentModel{
 		hashSize:                       hashSize,
 		arity:                          arity,
+		minKeyLength:                   max(minKeyLength, 0),
+		hashedPath:                     minKeyLength*len(common.UnpackBytes([]byte{0}, arity)) < int(hashSize),
 		terminalCommitmentSizeMax:      terminalCommitmentSizeMaxDefault,
 		valueSizeOptimizationThreshold: t,
 	}
@@ -87,6 +101,15 @@ func (m *CommitmentModel) PathArity() common.PathArity {
 
 func (m *CommitmentModel) HashSize() HashSize {
 	return m.hashSize
+}
+
+func (m *CommitmentModel) MinKeyLength() int {
+	return m.minKeyLength
+}
+
+// HashedPath reports whether every node path is hashed into the commitment (see New).
+func (m *CommitmentModel) HashedPath() bool {
+	return m.hashedPath
 }
 func (m *CommitmentModel) EqualCommitments(c1, c2 common.Serializable) bool {
 	return equalCommitments(c1, c2)
@@ -190,6 +213,19 @@ func CompressToHashSize(data []byte, sz HashSize) ([]byte, bool) {
 	return ret, valueInCommitment
 }
 
+// CommitToPath is the path slot of a node's commitment vector, shared by the
+// model and the proof verifier. The '+' separates node path and path fragment,
+// so 'a'+'bc' and 'ab'+'c' differ. Unless hashed, a path fitting in the hash
+// size is copied in zero-padded (see New for when that is unambiguous).
+func CommitToPath(nodePath, pathFragment []byte, sz HashSize, hashed bool) []byte {
+	pathToCommit := common.Concat(nodePath, byte('+'), pathFragment)
+	if hashed {
+		return blakeIt(pathToCommit, sz)
+	}
+	ret, _ := CompressToHashSize(pathToCommit, sz)
+	return ret
+}
+
 func (m *CommitmentModel) commitToData(data []byte) *terminalCommitment {
 	var commitmentBytes []byte
 	var isValueInCommitment bool
@@ -240,10 +276,7 @@ func (m *CommitmentModel) makeHashVector(nodeData *common.NodeData, nodePath []b
 		// squeeze terminal it into the hash size, if longer than hash size
 		hashes[m.arity.TerminalCommitmentIndex()], _ = CompressToHashSize(nodeData.Terminal.Bytes(), m.hashSize)
 	}
-	// we concatenate with '+' in between in order to distinguish between for example 'a'+'bc' and 'ab'+'c'
-	pathToCommit := common.Concat(nodePath, byte('+'), nodeData.PathFragment)
-	pathFragmentCommitmentBytes, _ := CompressToHashSize(pathToCommit, m.hashSize)
-	hashes[m.arity.PathCommitmentIndex()] = pathFragmentCommitmentBytes
+	hashes[m.arity.PathCommitmentIndex()] = CommitToPath(nodePath, nodeData.PathFragment, m.hashSize, m.hashedPath)
 	return hashes
 }
 

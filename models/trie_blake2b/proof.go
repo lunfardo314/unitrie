@@ -14,9 +14,15 @@ import (
 type MerkleProof struct {
 	PathArity common.PathArity
 	HashSize  HashSize
-	Key       []byte
-	Path      []*MerkleProofElement
+	// HashedPath: the trie hashes every node path (see New). Encoded as the top bit
+	// of the hash size byte, so a proof of a model keeping unhashed short paths has
+	// the same bytes as before the flag existed.
+	HashedPath bool
+	Key        []byte
+	Path       []*MerkleProofElement
 }
+
+const hashedPathFlag = 0x80
 
 type MerkleProofElement struct {
 	PathFragment []byte
@@ -46,7 +52,11 @@ func (p *MerkleProof) Write(w io.Writer) error {
 	if err = common.WriteByte(w, byte(p.PathArity)); err != nil {
 		return err
 	}
-	if err = common.WriteByte(w, byte(p.HashSize)); err != nil {
+	hashSizeByte := byte(p.HashSize)
+	if p.HashedPath {
+		hashSizeByte |= hashedPathFlag
+	}
+	if err = common.WriteByte(w, hashSizeByte); err != nil {
 		return err
 	}
 	encodedKey, err := common.EncodeUnpackedBytes(p.Key, p.PathArity)
@@ -81,7 +91,8 @@ func (p *MerkleProof) Read(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	p.HashSize = HashSize(b)
+	p.HashedPath = b&hashedPathFlag != 0
+	p.HashSize = HashSize(b &^ hashedPathFlag)
 	if p.HashSize != HashSize256 && p.HashSize != HashSize192 && p.HashSize != HashSize160 {
 		return errors.New("wrong hash size")
 	}

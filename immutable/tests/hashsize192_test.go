@@ -40,7 +40,7 @@ func TestBlake2b192Distinct(t *testing.T) {
 }
 
 func TestHashSize192Description(t *testing.T) {
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192, 0)
 	require.Contains(t, m.Description(), "HashSize(192)")
 	require.Contains(t, m.ShortName(), "192")
 }
@@ -63,7 +63,7 @@ func TestHashSize192CompressShortValueIsCopy(t *testing.T) {
 }
 
 func TestHashSize192RootCommitmentLength(t *testing.T) {
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192, 0)
 	store := common.NewInMemoryKVStore()
 	root := immutable.MustInitRoot(store, m, []byte("identity"))
 	require.Len(t, root.Bytes(), 24)
@@ -72,7 +72,7 @@ func TestHashSize192RootCommitmentLength(t *testing.T) {
 func TestHashSize192BasicOps(t *testing.T) {
 	runForArity := func(arity common.PathArity) {
 		t.Run(arity.String(), func(t *testing.T) {
-			m := trie_blake2b.New(arity, trie_blake2b.HashSize192)
+			m := trie_blake2b.New(arity, trie_blake2b.HashSize192, 0)
 			store := common.NewInMemoryKVStore()
 			root := immutable.MustInitRoot(store, m, []byte("identity-192"))
 			tr, err := immutable.NewTrieChained(m, store, root)
@@ -118,7 +118,7 @@ func TestHashSize192Determinism(t *testing.T) {
 				"klmnt": "k-thing",
 			}
 			build := func() common.VCommitment {
-				m := trie_blake2b.New(arity, trie_blake2b.HashSize192)
+				m := trie_blake2b.New(arity, trie_blake2b.HashSize192, 0)
 				store := common.NewInMemoryKVStore()
 				root := immutable.MustInitRoot(store, m, []byte("identity-192"))
 				tr, err := immutable.NewTrieChained(m, store, root)
@@ -131,7 +131,7 @@ func TestHashSize192Determinism(t *testing.T) {
 			}
 			r1 := build()
 			r2 := build()
-			m := trie_blake2b.New(arity, trie_blake2b.HashSize192)
+			m := trie_blake2b.New(arity, trie_blake2b.HashSize192, 0)
 			require.True(t, m.EqualCommitments(r1, r2))
 		})
 	}
@@ -144,7 +144,7 @@ func TestHashSize192ProofOfInclusionAndAbsence(t *testing.T) {
 	scenario := []string{"a", "ab", "abc", "bcd/" + strings.Repeat("Z", 200), "klmnt", "x", "y"}
 	runForArity := func(arity common.PathArity) {
 		t.Run(arity.String(), func(t *testing.T) {
-			m := trie_blake2b.New(arity, trie_blake2b.HashSize192)
+			m := trie_blake2b.New(arity, trie_blake2b.HashSize192, 0)
 			store := common.NewInMemoryKVStore()
 			rootInitial := immutable.MustInitRoot(store, m, []byte("idididididid"))
 			tr, err := immutable.NewTrieChained(m, store, rootInitial)
@@ -189,7 +189,7 @@ func TestHashSize192ProofOfInclusionAndAbsence(t *testing.T) {
 }
 
 func TestHashSize192ProofRoundTrip(t *testing.T) {
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192, 0)
 	store := common.NewInMemoryKVStore()
 	rootInitial := immutable.MustInitRoot(store, m, []byte("idididididid"))
 	tr, err := immutable.NewTrieChained(m, store, rootInitial)

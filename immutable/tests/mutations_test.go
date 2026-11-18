@@ -137,7 +137,7 @@ func TestCommitIdenticalLargeValues(t *testing.T) {
 		// This is the exact path that triggers the bug: Commit writes into a
 		// MustNoDoubleBooking mutations batch (as the Badger adaptor does).
 		store := common.NewInMemoryKVStore()
-		m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+		m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 		root := immutable.MustInitRoot(store, m, []byte("test"))
 		tr, err := immutable.NewTrieUpdatable(m, store, root)
 		require.NoError(t, err)
@@ -156,7 +156,7 @@ func TestCommitIdenticalLargeValues(t *testing.T) {
 	})
 	t.Run("three identical values arity2", func(t *testing.T) {
 		store := common.NewInMemoryKVStore()
-		m := trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160)
+		m := trie_blake2b.New(common.PathArity2, trie_blake2b.HashSize160, 0)
 		root := immutable.MustInitRoot(store, m, []byte("test"))
 		tr, err := immutable.NewTrieUpdatable(m, store, root)
 		require.NoError(t, err)
@@ -179,7 +179,7 @@ func TestCommitIdenticalLargeValues(t *testing.T) {
 		// Small values (<= 62 bytes) are embedded in the commitment, no value store write.
 		// This already worked before the fix — just verifying.
 		store := common.NewInMemoryKVStore()
-		m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+		m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 		root := immutable.MustInitRoot(store, m, []byte("test"))
 		tr, err := immutable.NewTrieUpdatable(m, store, root)
 		require.NoError(t, err)

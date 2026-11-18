@@ -132,6 +132,11 @@ func (m *CommitmentModel) Description() string {
 	return "trie commitment common implementation based on KZG (Kate) polynomial commitments and bn256 curve frm Dedis.Kyber library. 256-ary keys"
 }
 
+// MinKeyLength is 0: the model accepts keys of any length.
+func (m *CommitmentModel) MinKeyLength() int {
+	return 0
+}
+
 func (m *CommitmentModel) ShortName() string {
 	return "kzg-bn256"
 }

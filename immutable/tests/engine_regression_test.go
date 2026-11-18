@@ -19,7 +19,7 @@ import (
 // root of a mutation set must get the same root whatever the history behind it
 // (order, batching, cache size), or the nodes split.
 
-var engineModel = trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192)
+var engineModel = trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize192, 0)
 
 type engineOp struct{ k, v []byte }
 

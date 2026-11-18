@@ -34,7 +34,7 @@ func TestCacheIterationSmallCache(t *testing.T) {
 	const numEntries = 2000
 	const cacheSize = 50
 
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 	store, root := populateTrie(t, m, numEntries)
 
 	tr, err := immutable.NewTrieReader(m, store, root, cacheSize)
@@ -66,7 +66,7 @@ func TestCacheIterationSmallCache(t *testing.T) {
 // and all entries are still accessible.
 func TestCacheDisabled(t *testing.T) {
 	const numEntries = 500
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 	store, root := populateTrie(t, m, numEntries)
 
 	// clearCacheAtSize=0 means no caching
@@ -95,7 +95,7 @@ func TestCacheDisabled(t *testing.T) {
 // as a cache miss (i.e., the populated cache serves correct values).
 func TestCacheHitsReturnCorrectData(t *testing.T) {
 	const numEntries = 100
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 	store, root := populateTrie(t, m, numEntries)
 
 	// large cache so nothing gets evicted
@@ -132,7 +132,7 @@ func TestCacheLRUKeepsHot(t *testing.T) {
 	const cacheSize = 16
 	const interleavedRounds = 200
 
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 	store, root := populateTrie(t, m, numEntries)
 
 	cnt := &countingKVReader{inner: store}
@@ -199,7 +199,7 @@ func TestCacheEvictionConsistency(t *testing.T) {
 	const numEntries = 500
 	const cacheSize = 30
 
-	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256)
+	m := trie_blake2b.New(common.PathArity16, trie_blake2b.HashSize256, 0)
 	store, root := populateTrie(t, m, numEntries)
 
 	tr, err := immutable.NewTrieReader(m, store, root, cacheSize)
